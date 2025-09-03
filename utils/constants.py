@@ -53,7 +53,7 @@ TAIL_FRACTION_DEFAULT        = 0.30
 LAGS_DEFAULT                 = 24
 ROLLING_WINDOWS_DEFAULT      = (6, 24)
 DROP_CALENDAR_DEFAULT        = False
-RESIDUAL_THRESHOLD_PCT_DEFAULT = 95
+RESIDUAL_THRESHOLD_PCT_DEFAULT = 85
 
 # --------------------
 # Model-specific sane defaults
@@ -61,12 +61,12 @@ RESIDUAL_THRESHOLD_PCT_DEFAULT = 95
 # MLP
 MLP_DEFAULTS = dict(
     hidden=[128, 64],
-    dropout=0.2,
-    batch_size=1024,
+    dropout=0.1,
+    batch_size=256,
     lr=1e-3,
     weight_decay=1e-4,
-    max_epochs=30,
-    early_patience=5,
+    max_epochs=20,
+    early_patience=6,
 )
 
 # LSTM
@@ -85,12 +85,12 @@ LSTM_DEFAULTS = dict(
 
 # GRU (keras)
 GRU_DEFAULTS = dict(
-    seq_len=48,
+    seq_len=3*24,
     stride=1,
     batch_size=256,
-    epochs=50,
+    epochs=20,
     lr=1e-3,
-    patience=8,
+    patience=6,
 )
 
 # SVM / MLflow (only used where relevant)

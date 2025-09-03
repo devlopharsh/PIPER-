@@ -187,7 +187,6 @@ def build_forecasting_frame(
     target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
     lags: int = 24,
     rolling_windows: Tuple[int, ...] = (6, 24),
-    drop_calendar: bool = False,
     include_labels: bool = False,   # label-free by default
 ) -> pd.DataFrame:
     """
@@ -207,12 +206,6 @@ def build_forecasting_frame(
         df["TargetBase"] = tmp[DELTA_VOLUME_COL]
     else:
         df["TargetBase"] = df[VOLUME_READING_COL]
-
-    # df = add_time_features(df)
-    # if drop_calendar:
-    #     for c in CALENDAR_COLS:
-    #         if c in df.columns:
-    #             df.drop(columns=c, inplace=True)
 
     out = []
     for _, g in df.groupby(METER_ID_COL, sort=False):
@@ -265,7 +258,7 @@ def build_forecasting_frame(
 #region  Task-agnostic split/scale
 def time_based_group_split(
     df: pd.DataFrame,
-    test_size: float = 0.20,
+    test_size: float = 0.30,
     time_col: str = TIMESTAMP_COL,
     group_cols: List[str] = [METER_ID_COL],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -316,7 +309,6 @@ def build_aggregated_dataset(
     target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
     lags: int = 24,
     rolling_windows: Tuple[int, ...] = (6, 24),
-    drop_calendar: bool = False,
     # placement knob for forecasting test contamination
     tail_fraction: float = 0.30,
     # control label presence in forecast frames
@@ -363,7 +355,6 @@ def build_aggregated_dataset(
         target_col=target_col,
         lags=lags,
         rolling_windows=rolling_windows,
-        drop_calendar=drop_calendar,
         include_labels=forecast_include_labels,
     )
 #endregion

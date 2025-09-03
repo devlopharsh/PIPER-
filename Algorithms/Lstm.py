@@ -175,7 +175,7 @@ def train_and_eval_lstm(
         if len(train_ds) == 0 or len(val_ds) == 0 or len(test_ds) == 0:
             raise RuntimeError("Empty split after windowing. Reduce window/stride or check data coverage.")
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False,  num_workers=0)
         val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
@@ -247,7 +247,6 @@ def train_and_eval_lstm(
             data_dir=data_dir, use_forecast=True,
             forecast_include_labels=True,       # keep Leak_Flag so we can compute detection metrics
             lags=window,                        # match lag length to LSTM window
-            drop_calendar=True,                 # use only lags (clean signal for sequence)
             target_col=DELTA_VOLUME_COL,        # predict ΔVolume (works well for residual anomalies)
         )
 
@@ -280,7 +279,7 @@ def train_and_eval_lstm(
         if len(train_ds)==0 or len(val_ds)==0 or len(test_ds)==0:
             raise RuntimeError("Empty split in forecast mode. Check window/lags or data coverage.")
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False,  num_workers=0)
         val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
@@ -458,7 +457,7 @@ if __name__ == "__main__":
     # Shared hyperparameters:
     # - window: sequence length (also lags in forecast mode)
     # - stride: how far we move the window each step (classification only)
-    p.add_argument("--window", type=int, default=90*24)
+    p.add_argument("--window", type=int, default=3*24)
     p.add_argument("--stride", type=int, default=1)
     p.add_argument("--hidden", type=int, default=64)
     p.add_argument("--num_layers", type=int, default=1)
