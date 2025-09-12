@@ -102,7 +102,6 @@ def train_and_eval_mlp(
     test_size: float = TEST_SIZE_DEFAULT,
 
     # Classification data knobs
-    leak_fraction: float = 0.30,
     n_segments_min: int = 1,
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
@@ -123,7 +122,7 @@ def train_and_eval_mlp(
             data_dir=data_dir,
             use_forecast=False,
             leak_mode="variable",
-            leak_fraction=leak_fraction,
+            test_fraction=test_size,
             n_segments_range=(n_segments_min, n_segments_max),
             min_len_frac=min_len_frac,
         )
@@ -347,7 +346,6 @@ if __name__ == "__main__":
     parser.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
 
     # Classification builder knobs
-    parser.add_argument("--leak_fraction", type=float, default=0.30)
     parser.add_argument("--n_segments_min", type=int, default=1)
     parser.add_argument("--n_segments_max", type=int, default=3)
     parser.add_argument("--min_len_frac", type=float, default=0.05)
@@ -373,7 +371,6 @@ if __name__ == "__main__":
         early_patience=args.early_patience,
         seed=args.seed,
         test_size=args.test_size,
-        leak_fraction=args.leak_fraction,
         n_segments_min=args.n_segments_min,
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,

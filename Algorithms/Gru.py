@@ -149,7 +149,6 @@ def run_gru(
     test_size: float = TEST_SIZE_DEFAULT,
     seed: int = RANDOM_SEED_DEFAULT,
     # classification builder knobs
-    leak_fraction: float = 0.30,
     n_segments_min: int = 1,
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
@@ -164,7 +163,7 @@ def run_gru(
             data_dir=data_dir,
             use_forecast=False,
             leak_mode="variable",
-            leak_fraction=leak_fraction,
+            test_fraction=test_size,
             n_segments_range=(n_segments_min, n_segments_max),
             min_len_frac=min_len_frac,
         )
@@ -231,7 +230,7 @@ def run_gru(
             data_dir=data_dir,
             use_forecast=True,
             lags=seq_len,
-            leak_fraction=leak_fraction,
+            test_fraction=test_size,
             forecast_include_labels=True,   # keep Leak_Flag for train filter & test eval
             target_col=DELTA_VOLUME_COL,
         )
@@ -319,7 +318,6 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
 
     # classification knobs
-    ap.add_argument("--leak_fraction", type=float, default=0.3)
     ap.add_argument("--n_segments_min", type=int, default=1)
     ap.add_argument("--n_segments_max", type=int, default=3)
     ap.add_argument("--min_len_frac", type=float, default=0.05)
@@ -340,7 +338,6 @@ if __name__ == "__main__":
         patience=args.patience,
         test_size=args.test_size,
         seed=args.seed,
-        leak_fraction=args.leak_fraction,
         n_segments_min=args.n_segments_min,
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,

@@ -28,7 +28,6 @@ VOLUME_COL        = "Volume"
 VOLUME_READING_COL= "Volume_Reading"
 DELTA_VOLUME_COL  = "Delta_Volume"
 LEAK_FLAG_COL     = "Leak_Flag"
-LEAK_TYPE_COL     = "Leak_Type"
 FORECAST_Y_COL    = "y"             # target used by forecasting builders
 
 # Calendar feature set
@@ -85,12 +84,12 @@ LSTM_DEFAULTS = dict(
 
 # GRU (keras)
 GRU_DEFAULTS = dict(
-    seq_len=3*24,
+    seq_len=24,
     stride=1,
     batch_size=256,
     epochs=20,
     lr=1e-3,
-    patience=6,
+    patience=8,
 )
 
 # SVM / MLflow (only used where relevant)

@@ -125,7 +125,6 @@ def train_and_eval_lstm(
     max_epochs: int = 20, early_patience: int = 4,
     seed: int = 42, test_size: float = 0.30,
     # classification builder knobs
-    leak_fraction: float = 0.30,         # fraction of the WHOLE series that will be leak points
     n_segments_min: int = 1,             # we create this many (or up to max) leak segments per meter
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,          # each segment must be at least this fraction of the series
@@ -148,7 +147,7 @@ def train_and_eval_lstm(
         df = build_aggregated_dataset(
             data_dir=data_dir, use_forecast=False,
             leak_mode="variable",                  # use variable leak profile
-            leak_fraction=leak_fraction,           # how many samples become leaks overall
+            test_fraction=test_size,           # how many samples become leaks overall
             n_segments_range=(n_segments_min, n_segments_max),
             min_len_frac=min_len_frac,
         )
@@ -175,7 +174,7 @@ def train_and_eval_lstm(
         if len(train_ds) == 0 or len(val_ds) == 0 or len(test_ds) == 0:
             raise RuntimeError("Empty split after windowing. Reduce window/stride or check data coverage.")
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False,  num_workers=0)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
         val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
@@ -457,7 +456,7 @@ if __name__ == "__main__":
     # Shared hyperparameters:
     # - window: sequence length (also lags in forecast mode)
     # - stride: how far we move the window each step (classification only)
-    p.add_argument("--window", type=int, default=3*24)
+    p.add_argument("--window", type=int, default=24)
     p.add_argument("--stride", type=int, default=1)
     p.add_argument("--hidden", type=int, default=64)
     p.add_argument("--num_layers", type=int, default=1)
@@ -465,13 +464,12 @@ if __name__ == "__main__":
     p.add_argument("--batch_size", type=int, default=256)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--weight_decay", type=float, default=1e-5)
-    p.add_argument("--max_epochs", type=int, default=20)
+    p.add_argument("--max_epochs", type=int, default=50)
     p.add_argument("--early_patience", type=int, default=8)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--test_size", type=float, default=0.30)
 
     # Classification knobs (affect how synthetic leaks are injected):
-    p.add_argument("--leak_fraction", type=float, default=0.30)
     p.add_argument("--n_segments_min", type=int, default=1)
     p.add_argument("--n_segments_max", type=int, default=3)
     p.add_argument("--min_len_frac", type=float, default=0.05)
@@ -498,7 +496,6 @@ if __name__ == "__main__":
         early_patience=args.early_patience,
         seed=args.seed,
         test_size=args.test_size,
-        leak_fraction=args.leak_fraction,
         n_segments_min=args.n_segments_min,
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,

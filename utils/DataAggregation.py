@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from utils.constants import (
     METER_ID_COL, TIMESTAMP_COL,
     VOLUME_COL, VOLUME_READING_COL, DELTA_VOLUME_COL,
-    LEAK_FLAG_COL, LEAK_TYPE_COL, FORECAST_Y_COL,
+    LEAK_FLAG_COL, FORECAST_Y_COL,
     CALENDAR_COLS,
 )
 
@@ -79,22 +79,26 @@ def add_delta_volume(
 def inject_random_leak_segments(
     df_raw: pd.DataFrame,
     leak_mode: Literal["constant", "variable"] = "variable",
-    leak_fraction: float = 0.30,
+    leak_share_total: float = 0.20,
     n_segments_range: Tuple[int, int] = (1, 3),
     min_len_frac: float = 0.05,
     seed: int = 42,
-    leak_placement: Literal["random", "tail"] = "random",
-    tail_fraction: float = 0.30,
+    placement: Literal["random", "tail"] = "random",
+    test_fraction: float = 0.30,
+    ensure_test_leak_abs_share: float = 0.0,
 ) -> pd.DataFrame:
     """
-    Create labeled leak episodes per meter and set VOLUME_READING_COL accordingly.
+    Inject persistent leak episodes per meter.
 
-    leak_placement:
-      - "random": (default) leak episodes can appear anywhere
-      - "tail":   leak episodes restricted to last `tail_fraction` of each meter's series
+    Guarantees (per meter):
+      • ~leak_share_total of rows are leaks (default 20%).
+      • If placement=='tail' → push (almost) all leaked points into the last test_fraction of the series.
+      • If placement=='random' and ensure_test_leak_abs_share>0 → ensure at least that absolute share is leaked in test.
     """
-    assert leak_mode in {"constant", "variable"}
-    assert 0 < tail_fraction <= 1.0, "tail_fraction must be in (0, 1]"
+    assert 0.0 < leak_share_total <= 1.0
+    assert 0.0 <= ensure_test_leak_abs_share <= leak_share_total
+    assert 0.0 < test_fraction <= 1.0
+
     rng = np.random.default_rng(seed)
     rows = []
 
@@ -104,71 +108,117 @@ def inject_random_leak_segments(
         if n == 0:
             continue
 
-        target_leak = int(np.round(leak_fraction * n))
-        target_leak = max(0, min(target_leak, n))
+        total_leak_pts = int(round(leak_share_total * n))
 
-        k_min, k_max = n_segments_range
-        k = int(rng.integers(k_min, k_max + 1))
-        min_len = max(1, int(np.floor(min_len_frac * n)))
+        test_len   = int(round(test_fraction * n))
+        test_start = max(0, n - test_len)
 
-        if target_leak < min_len:
-            k, target_leak = 1, min_len
-
-        slack = max(0, target_leak - k * min_len)
-        parts = rng.multinomial(slack, [1.0 / k] * k) + min_len  # segment lengths
-
-        if leak_placement == "tail":
-            tail_start = max(0, n - int(np.floor(tail_fraction * n)))
+        # Decide how many leaked points MUST land in test vs train
+        if placement == "tail":
+            desired_test_pts  = min(total_leak_pts, test_len)  # put all we can into test
+            desired_train_pts = total_leak_pts - desired_test_pts
         else:
-            tail_start = 0
+            # Allocate exactly 5% of all rows as leaks in test
+            desired_test_pts = int(round(ensure_test_leak_abs_share * n))
+            desired_test_pts = min(desired_test_pts, test_len)
+
+            # The rest go to train, no spillover allowed
+            desired_train_pts = total_leak_pts - desired_test_pts
+            desired_train_pts = min(desired_train_pts, n - test_len)  # safety clamp
+
+            # If rounding/clamping caused mismatch, fix it here
+            if desired_test_pts + desired_train_pts != total_leak_pts:
+                # Force adjustment into train, never test
+                desired_train_pts = total_leak_pts - desired_test_pts
+
+
+        # Helper to sample segment lengths that sum ~ target_pts
+        def sample_parts(target_pts: int) -> list[int]:
+            if target_pts <= 0: return []
+            k_min, k_max = n_segments_range
+            # minimal segment length based on series size
+            seg_min = max(1, int(np.floor(min_len_frac * n)))
+            # pick number of segments
+            k = int(rng.integers(k_min, k_max + 1))
+            if target_pts < seg_min:
+                return [target_pts]
+            # clamp k so base fits
+            k = max(1, min(k, target_pts // seg_min))
+            base = seg_min * k
+            slack = max(0, target_pts - base)
+            parts = (rng.multinomial(slack, [1.0 / k] * k) + seg_min).astype(int)
+            return list(map(int, parts))
+
+        test_parts  = sample_parts(desired_test_pts)
+        train_parts = sample_parts(desired_train_pts)
+        rng.shuffle(test_parts); rng.shuffle(train_parts)
 
         taken = np.zeros(n, dtype=bool)
-        segs = []
-        for L in parts:
-            placed = False
-            start_low, start_high = tail_start, n - L
-            if start_high < start_low:
-                start_low, start_high = 0, n - L
+        segs: list[tuple[int,int]] = []
 
+        def place_one(L: int, start_low: int, start_high: int) -> tuple[bool, tuple[int,int] | None]:
             for _ in range(200):
-                start = int(rng.integers(start_low, start_high + 1))
-                window = slice(start, start + L)
-                if not taken[window].any():
-                    taken[window] = True
-                    segs.append((start, start + L))
-                    placed = True
-                    break
+                if start_high < start_low: break
+                s = int(rng.integers(start_low, start_high + 1))
+                e = s + L
+                if e > n: continue
+                w = slice(s, e)
+                if not taken[w].any():
+                    taken[w] = True
+                    return True, (s, e)
+            for s in range(start_low, max(start_high, start_low) + 1):
+                e = s + L
+                if e > n: break
+                w = slice(s, e)
+                if not taken[w].any():
+                    taken[w] = True
+                    return True, (s, e)
+            return False, None
 
-            if not placed:
-                for s in range(start_low, start_high + 1):
-                    window = slice(s, s + L)
-                    if not taken[window].any():
-                        taken[window] = True
-                        segs.append((s, s + L))
-                        placed = True
-                        break
+        # 1) Place test segments strictly inside test slice
+        for L in test_parts:
+            ok, seg = place_one(L, test_start, n - L)
+            if ok: segs.append(seg)
 
+        # 2) Place train segments strictly inside train slice
+        for L in train_parts:
+            ok, seg = place_one(L, 0, max(0, test_start - L))
+            if ok: segs.append(seg)
+
+        # If still short (due to packing), try anywhere as last resort
+        placed_pts = sum((e - s) for s, e in segs)
+        deficit = total_leak_pts - placed_pts
+        while deficit > 0:
+            L = min(deficit, max(1, int(np.floor(min_len_frac * n))))
+            ok, seg = place_one(L, 0, n - L)
+            if not ok: break
+            segs.append(seg); deficit -= L
+
+        # Build mask
         leak_mask = np.zeros(n, dtype=bool)
         for s, e in segs:
             leak_mask[s:e] = True
+        # Hard cap to exact total_leak_pts if we overshot
+        if leak_mask.sum() > total_leak_pts:
+            excess = leak_mask.sum() - total_leak_pts
+            idx = np.where(leak_mask)[0]
+            leak_mask[idx[-excess:]] = False
 
         out = g.copy()
         out[LEAK_FLAG_COL] = leak_mask.astype(int)
 
         if leak_mode == "constant":
-            out[VOLUME_READING_COL] = np.where(
-                leak_mask, out["Volume_with_Constant_Leakage"], out[VOLUME_COL]
-            )
-            out[LEAK_TYPE_COL] = np.where(leak_mask, 1, 0)
+            out[VOLUME_READING_COL] = np.where(leak_mask, out["Volume_with_Constant_Leakage"], out[VOLUME_COL])
         else:
-            # Scale up variable leak effect
-            leak_increase = out["Volume_with_Variable_Leakage"] - out[VOLUME_COL]
-            amplified = out[VOLUME_COL] + leak_increase * 100  # 3–10 L becomes 300–1000 L
-
-            out[VOLUME_READING_COL] = np.where(
-                leak_mask, amplified, out[VOLUME_COL]
-            )
-            out[LEAK_TYPE_COL] = np.where(leak_mask, 2, 0)
+            out = add_delta_volume(out, col=VOLUME_COL, new_col="__DeltaBase")
+            base_flow = out["__DeltaBase"].clip(lower=0)
+            avg_flow  = float(base_flow[base_flow > 0].median() or base_flow.mean() or 1.0)
+            alpha     = float(rng.uniform(0.1, 0.20))     # 10–20% of typical hourly usage
+            leak_rate = alpha * avg_flow
+            extra_delta = np.where(leak_mask, leak_rate, 0.0).astype(np.float64)
+            extra_cum   = np.cumsum(extra_delta)
+            out[VOLUME_READING_COL] = out[VOLUME_COL] + extra_cum
+            out.drop(columns=["__DeltaBase"], errors="ignore", inplace=True)
 
         out = add_time_features(out)
         out = add_delta_volume(out, col=VOLUME_READING_COL, new_col=DELTA_VOLUME_COL)
@@ -247,7 +297,7 @@ def build_forecasting_frame(
             keep.append(cal)
 
     if include_labels:
-        for maybe in [LEAK_FLAG_COL, LEAK_TYPE_COL]:
+        for maybe in [LEAK_FLAG_COL]:
             if maybe in full.columns:
                 keep.append(maybe)
 
@@ -302,54 +352,41 @@ def build_aggregated_dataset(
     use_forecast: bool,
     # classification knobs
     leak_mode: Literal["constant", "variable"] = "variable",
-    leak_fraction: float = 0.30,
     n_segments_range: Tuple[int, int] = (1, 3),
     min_len_frac: float = 0.05,
     # forecasting knobs
     target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
     lags: int = 24,
     rolling_windows: Tuple[int, ...] = (6, 24),
-    # placement knob for forecasting test contamination
-    tail_fraction: float = 0.30,
-    # control label presence in forecast frames
+    test_fraction: float = 0.30,
     forecast_include_labels: bool = False,
 ) -> pd.DataFrame:
-    """
-    Classification (use_forecast=False):
-        Returns columns needed for classification:
-          VOLUME_READING_COL, *CALENDAR_COLS, DELTA_VOLUME_COL, LEAK_FLAG_COL, LEAK_TYPE_COL, ...
-        Leaks are placed randomly along the series.
-
-    Forecasting (use_forecast=True):
-        Returns columns: [METER_ID_COL, TIMESTAMP_COL, FORECAST_Y_COL, lag_*, roll*, (optional calendar), (optional labels)]
-        Leaks are injected only in the tail (last `tail_fraction`) so time-based splitting
-        can yield clean train and leaky test if you set test_size ≈ tail_fraction.
-    """
     raw = load_and_merge(find_csvs(data_dir))
 
     if not use_forecast:
-        return inject_random_leak_segments(
+        df = inject_random_leak_segments(
             raw,
             leak_mode=leak_mode,
-            leak_fraction=leak_fraction,
+            leak_share_total=0.20,
             n_segments_range=n_segments_range,
             min_len_frac=min_len_frac,
-            leak_placement="random",
+            placement="random",
+            test_fraction=test_fraction,
+            ensure_test_leak_abs_share=0.05,       # 5% of ALL rows must be leaked in test
         )
+        return df
 
-    # forecasting: place leaks only in the tail
     df_with_labels = inject_random_leak_segments(
         raw,
         leak_mode=leak_mode,
-        leak_fraction= 0.5 * tail_fraction, # half of the tail contains leaks,
+        leak_share_total=0.20,
         n_segments_range=n_segments_range,
         min_len_frac=min_len_frac,
-        leak_placement="tail",
-        tail_fraction=tail_fraction,
+        placement="tail",
+        test_fraction=test_fraction,
+        ensure_test_leak_abs_share=0.0,
     )
 
-    # Build lag/rolling features.
-    # Keep labels only if forecast_include_labels=True.
     return build_forecasting_frame(
         df_with_labels,
         target_col=target_col,
