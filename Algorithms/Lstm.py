@@ -10,12 +10,12 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import (
     accuracy_score, f1_score, classification_report, confusion_matrix,
     mean_absolute_error, mean_squared_error, precision_score, recall_score,
-    precision_recall_curve, average_precision_score, fbeta_score
+    average_precision_score, fbeta_score
 )
 import matplotlib.pyplot as plt
 import optuna
 from scipy.special import expit
-from sklearn.model_selection import StratifiedKFold
+from utils.ThresholdComputer import find_stable_threshold
 
 # ---- Project utilities / constants
 from utils.constants import (
@@ -32,35 +32,6 @@ from utils.DataAggregation import (
 
 # Use GPU if available; otherwise CPU.
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-#region Threshold helpers
-def choose_thresholds(y_true, probs, beta=1.0):
-    """Compute precision-recall curve and find best threshold for given beta."""
-    p, r, thr = precision_recall_curve(y_true, probs)
-    thr = np.append(thr, 1.0)  # align lengths
-
-    f_beta = (1 + beta**2) * (p * r) / (beta**2 * p + r + 1e-12)
-    i = int(np.nanargmax(f_beta))
-    best_thr = thr[i]
-
-    return {
-        "best_thr": float(best_thr),
-        # "best_fbeta": float(f_beta[i]),
-        # "best_prec": float(p[i]),
-        # "best_rec": float(r[i]),
-        # "ap": float(average_precision_score(y_true, probs)),
-    }
-
-def find_stable_threshold(y_true, probs, beta=1.0, n_splits=5):
-    """Find a robust threshold by averaging best thresholds across CV folds."""
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-    thresholds = []
-    for _, val_idx in skf.split(probs, y_true):
-        y_val, p_val = y_true[val_idx], probs[val_idx]
-        out = choose_thresholds(y_val, p_val, beta=beta)
-        thresholds.append(out["best_thr"])
-    return float(np.mean(thresholds)), thresholds
-#endregion
 
 
 #region Datasets for cls & forecast
