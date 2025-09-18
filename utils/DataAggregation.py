@@ -72,6 +72,28 @@ def add_delta_volume(
     df.sort_values([METER_ID_COL, TIMESTAMP_COL], inplace=True)
     df[new_col] = df.groupby(METER_ID_COL)[col].diff().fillna(0.0)
     return df
+
+def add_rolling_features(
+    df: pd.DataFrame,
+    col: str = DELTA_VOLUME_COL,
+    windows: Tuple[int, ...] = (6, 24)
+) -> pd.DataFrame:
+    """
+    Add rolling mean/std features of `col` per meter.
+    Example: 6-step and 24-step rolling stats of Delta_Volume.
+    """
+    df = df.sort_values([METER_ID_COL, TIMESTAMP_COL]).copy()
+    for w in windows:
+        df[f"roll{w}_mean"] = (
+            df.groupby(METER_ID_COL)[col]
+              .transform(lambda x: x.rolling(w, min_periods=1).mean())
+        )
+        df[f"roll{w}_std"] = (
+            df.groupby(METER_ID_COL)[col]
+              .transform(lambda x: x.rolling(w, min_periods=1).std().fillna(0.0))
+        )
+    return df
+
 #endregion
 
 
@@ -213,15 +235,45 @@ def inject_random_leak_segments(
             out = add_delta_volume(out, col=VOLUME_COL, new_col="__DeltaBase")
             base_flow = out["__DeltaBase"].clip(lower=0)
             avg_flow  = float(base_flow[base_flow > 0].median() or base_flow.mean() or 1.0)
-            alpha     = float(rng.uniform(0.1, 0.20))     # 10–20% of typical hourly usage
-            leak_rate = alpha * avg_flow
-            extra_delta = np.where(leak_mask, leak_rate, 0.0).astype(np.float64)
-            extra_cum   = np.cumsum(extra_delta)
+
+            # Progressive leak: starts at alpha*avg_flow, ramps up to max_leak_frac*avg_flow
+            max_leak_frac = 0.15                  # cap at 10% of average flow
+            alpha = float(rng.uniform(0.02, 0.05))  # start at 2–5% of average flow
+            gamma = float(rng.uniform(0.2, 0.5))    # growth rate; higher = quicker saturation
+
+            extra_delta = np.zeros(len(out), dtype=np.float64)
+            leak_idx = np.where(leak_mask)[0]
+
+            if len(leak_idx) > 0:
+                segments = np.split(leak_idx, np.where(np.diff(leak_idx) > 1)[0] + 1)
+                for seg in segments:
+                    seg_len = len(seg)
+                    t = np.arange(seg_len)
+
+                    # leak fraction rises from alpha → max_leak_frac
+                    leak_fraction = alpha + (max_leak_frac - alpha) * (1 - np.exp(-gamma * t))
+                    delta = leak_fraction * avg_flow
+
+                    extra_delta[seg] = delta
+    #                 print(
+    #     f"[Leak injection] Meter={g[METER_ID_COL].iloc[0]} | "
+    #     f"SegLen={seg_len} | avg_flow={avg_flow:.2f} | "
+    #     f"alpha={alpha:.3f} | gamma={gamma:.3f} | "
+    #     f"min_leak={delta.min():.2f} | max_leak={delta.max():.2f}"
+    # )
+
+            extra_cum = np.cumsum(extra_delta)
             out[VOLUME_READING_COL] = out[VOLUME_COL] + extra_cum
             out.drop(columns=["__DeltaBase"], errors="ignore", inplace=True)
 
         out = add_time_features(out)
         out = add_delta_volume(out, col=VOLUME_READING_COL, new_col=DELTA_VOLUME_COL)
+        out = add_rolling_features(out, col=DELTA_VOLUME_COL, windows=(6, 24))         # rolling stats
+
+        # Optional: relative usage (Delta / daily mean)
+        out["rel_to_roll24"] = np.where(out["roll24_mean"] > 0,
+                                        out[DELTA_VOLUME_COL] / out["roll24_mean"],
+                                        0.0)
         rows.append(out)
 
     combined = pd.concat(rows, ignore_index=True)
@@ -352,7 +404,7 @@ def build_aggregated_dataset(
     use_forecast: bool,
     # classification knobs
     leak_mode: Literal["constant", "variable"] = "variable",
-    n_segments_range: Tuple[int, int] = (1, 3),
+    n_segments_range: Tuple[int, int] = (2, 5),
     min_len_frac: float = 0.05,
     # forecasting knobs
     target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
@@ -376,22 +428,22 @@ def build_aggregated_dataset(
         )
         return df
 
-    df_with_labels = inject_random_leak_segments(
-        raw,
-        leak_mode=leak_mode,
-        leak_share_total=0.20,
-        n_segments_range=n_segments_range,
-        min_len_frac=min_len_frac,
-        placement="tail",
-        test_fraction=test_fraction,
-        ensure_test_leak_abs_share=0.0,
-    )
+    # df_with_labels = inject_random_leak_segments(
+    #     raw,
+    #     leak_mode=leak_mode,
+    #     leak_share_total=0.20,
+    #     n_segments_range=n_segments_range,
+    #     min_len_frac=min_len_frac,
+    #     placement="tail",
+    #     test_fraction=test_fraction,
+    #     ensure_test_leak_abs_share=0.0,
+    # )
 
-    return build_forecasting_frame(
-        df_with_labels,
-        target_col=target_col,
-        lags=lags,
-        rolling_windows=rolling_windows,
-        include_labels=forecast_include_labels,
-    )
+    # return build_forecasting_frame(
+    #     df_with_labels,
+    #     target_col=target_col,
+    #     lags=lags,
+    #     rolling_windows=rolling_windows,
+    #     include_labels=forecast_include_labels,
+    # )
 #endregion

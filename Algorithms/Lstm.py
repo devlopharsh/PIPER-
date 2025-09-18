@@ -10,17 +10,20 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import (
     accuracy_score, f1_score, classification_report, confusion_matrix,
     mean_absolute_error, mean_squared_error, precision_score, recall_score,
+    precision_recall_curve, average_precision_score, fbeta_score
 )
 import matplotlib.pyplot as plt
+import optuna
+from scipy.special import expit
+from sklearn.model_selection import StratifiedKFold
 
 # ---- Project utilities / constants
 from utils.constants import (
     DATA_DIR, MODELS_DIR,
     METER_ID_COL, TIMESTAMP_COL,
     LEAK_FLAG_COL, FORECAST_Y_COL,
-    CLS_FEATURE_COLS, DELTA_VOLUME_COL, VOLUME_READING_COL
+    CLS_FEATURE_COLS, DELTA_VOLUME_COL
 )
-
 from utils.DataAggregation import (
     build_aggregated_dataset,
     time_based_group_split,
@@ -30,47 +33,78 @@ from utils.DataAggregation import (
 # Use GPU if available; otherwise CPU.
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+#region Threshold helpers
+def choose_thresholds(y_true, probs, beta=1.0):
+    """Compute precision-recall curve and find best threshold for given beta."""
+    p, r, thr = precision_recall_curve(y_true, probs)
+    thr = np.append(thr, 1.0)  # align lengths
+
+    f_beta = (1 + beta**2) * (p * r) / (beta**2 * p + r + 1e-12)
+    i = int(np.nanargmax(f_beta))
+    best_thr = thr[i]
+
+    return {
+        "best_thr": float(best_thr),
+        # "best_fbeta": float(f_beta[i]),
+        # "best_prec": float(p[i]),
+        # "best_rec": float(r[i]),
+        # "ap": float(average_precision_score(y_true, probs)),
+    }
+
+def find_stable_threshold(y_true, probs, beta=1.0, n_splits=5):
+    """Find a robust threshold by averaging best thresholds across CV folds."""
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    thresholds = []
+    for _, val_idx in skf.split(probs, y_true):
+        y_val, p_val = y_true[val_idx], probs[val_idx]
+        out = choose_thresholds(y_val, p_val, beta=beta)
+        thresholds.append(out["best_thr"])
+    return float(np.mean(thresholds)), thresholds
+#endregion
+
 
 #region Datasets for cls & forecast
 class SeqDatasetCls(Dataset):
     """
-    Classification dataset: builds rolling windows per meter.
-    - Each window is a sequence of length `window` over `feature_cols`.
-    - The label (0/1) is the LEAK_FLAG at the *last* timestamp in the window.
-
-    Why label at the last step? Because we want the model to say:
-    "Given the past `window` steps, is there a leak now?"
+    Classification dataset (per hour).
+    - Each window is [T, F]
+    - Labels are [T] (one label for each timestep, not only the last).
     """
     def __init__(self, df: pd.DataFrame, feature_cols: list[str], window: int = 24, stride: int = 1):
-        # Build all windows up front so __getitem__ is simple and fast.
         self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
 
     @staticmethod
     def _build_sequences(df: pd.DataFrame, feature_cols: list[str], window: int, stride: int):
         Xs, ys = [], []
-        # Group by meter so we never mix different meters in one window
+        # Group by meter so sequences from different meters do not mix
         for _, g in df.sort_values([METER_ID_COL, TIMESTAMP_COL]).groupby(METER_ID_COL, sort=False):
             g = g.reset_index(drop=True)
-            arr = g[feature_cols].to_numpy(dtype=np.float32)    # features for this meter
-            labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)  # 0/1 leak per row
+            arr = g[feature_cols].to_numpy(dtype=np.float32)    # [N, F]
+            labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)  # [N]
             n = len(g)
-            # Sliding window: start → end with step = stride
+            # Sliding windows
             for start in range(0, n - window + 1, stride):
                 end = start + window
-                Xs.append(arr[start:end])      # shape [T, F]
-                ys.append(labels[end - 1])     # label at the last time index in the window
-        # Handle edge case: not enough data to form a single window
+                Xs.append(arr[start:end])      # [T, F]
+                ys.append(labels[start:end])   # [T]
         if not Xs:
-            return np.zeros((0, window, len(feature_cols)), np.float32), np.zeros((0,), np.int64)
-        return np.stack(Xs), np.array(ys, dtype=np.int64)
+            return (
+                np.zeros((0, window, len(feature_cols)), np.float32),
+                np.zeros((0, window), np.int64),
+            )
+        return np.stack(Xs), np.stack(ys)
 
-    def __len__(self): return len(self.y)
-    def __getitem__(self, i): return torch.from_numpy(self.X[i]), torch.tensor(self.y[i])
+    def __len__(self): 
+        return len(self.y)
+
+    def __getitem__(self, i): 
+        return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
+
 
 
 class LagSeqDatasetForecast(Dataset):
     """
-    Forecasting dataset: each row is already a *lag vector*:
+    Forecasting dataset: each row is already a lag vector.
       X = [lag_k,..., lag_2, lag_1] for the chosen target (ΔVolume here),
       y = FORECAST_Y_COL (what we want to predict at time t).
 
@@ -91,14 +125,14 @@ class LSTMHead(nn.Module):
     """
     A minimal LSTM → Linear head:
     - LSTM encodes the sequence into hidden states.
-    - We take the last time step's hidden state and pass it through a linear layer.
+    - We take the output at all time steps and pass them through a linear layer.
     - For classification: we’ll apply BCEWithLogitsLoss (so output is a logit).
     - For regression: we’ll apply MSELoss directly on the scalar output.
     """
     def __init__(self, in_dim: int, hidden: int = 64, num_layers: int = 1,
-                 bidirectional: bool = False, dropout: float = 0.1):
+                 bidirectional: bool = False, dropout: float = 0.2):
         super().__init__()
-        # dropout only applies between stacked LSTM layers; it’s ignored for num_layers=1
+        # Dropout only applies between stacked LSTM layers; it’s ignored for num_layers=1
         self.lstm = nn.LSTM(
             input_size=in_dim, hidden_size=hidden, num_layers=num_layers,
             bidirectional=bidirectional, batch_first=True,
@@ -108,11 +142,10 @@ class LSTMHead(nn.Module):
         self.fc = nn.Linear(out_dim, 1)
 
     def forward(self, x):            # x: [B, T, F]
-        out, _ = self.lstm(x)        # out: [B, T, H]
-        last = out[:, -1, :]         # take the last time step representation
-        return self.fc(last).squeeze(-1)  # [B]
+        out, _ = self.lstm(x)        # [B, T, H]
+        out = self.fc(out)           # [B, T, 1]
+        return out.squeeze(-1)       # [B, T]
 #endregion
-
 
 #region Model Training & Evaluation
 def train_and_eval_lstm(
@@ -123,11 +156,11 @@ def train_and_eval_lstm(
     hidden: int = 64, num_layers: int = 1, bidirectional: bool = False,
     batch_size: int = 256, lr: float = 1e-3, weight_decay: float = 1e-5,
     max_epochs: int = 20, early_patience: int = 4,
-    seed: int = 42, test_size: float = 0.30,
+    seed: int = 42, test_size: float = 0.30, dropout = 0.1,
     # classification builder knobs
-    n_segments_min: int = 1,             # we create this many (or up to max) leak segments per meter
-    n_segments_max: int = 3,
-    min_len_frac: float = 0.05,          # each segment must be at least this fraction of the series
+    n_segments_min: int = 2,             # number of leak segments per meter
+    n_segments_max: int = 5,
+    min_len_frac: float = 0.05,          # each leak segment must be at least this fraction of the series
     # forecasting builder knobs
     residual_threshold_pct: float = 97.5 # percentile for residual-based detection threshold
 ):
@@ -147,7 +180,7 @@ def train_and_eval_lstm(
         df = build_aggregated_dataset(
             data_dir=data_dir, use_forecast=False,
             leak_mode="variable",                  # use variable leak profile
-            test_fraction=test_size,           # how many samples become leaks overall
+            test_fraction=test_size,               # how many samples become leaks overall
             n_segments_range=(n_segments_min, n_segments_max),
             min_len_frac=min_len_frac,
         )
@@ -170,7 +203,7 @@ def train_and_eval_lstm(
         val_ds   = SeqDatasetCls(val_scaled,     feature_cols, window=window, stride=stride)
         test_ds  = SeqDatasetCls(test_scaled,    feature_cols, window=window, stride=stride)
 
-        # If your window is too large vs. series length, you can end up with zero samples
+        # If window is too large compared to series length, you may end up with zero samples
         if len(train_ds) == 0 or len(val_ds) == 0 or len(test_ds) == 0:
             raise RuntimeError("Empty split after windowing. Reduce window/stride or check data coverage.")
 
@@ -179,16 +212,16 @@ def train_and_eval_lstm(
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
         # 5) Handle class imbalance by weighting positive class in BCE
-        y_seq = train_ds.y
+        y_seq = train_ds.y.ravel()  # flatten all labels [B*T]
         pos_weight = torch.tensor([(len(y_seq) - y_seq.sum()) / (y_seq.sum() + 1e-6)],
-                                  dtype=torch.float32, device=DEVICE)
+                                dtype=torch.float32, device=DEVICE)
 
         model = LSTMHead(in_dim=len(feature_cols), hidden=hidden, num_layers=num_layers,
-                         bidirectional=bidirectional, dropout=0.1).to(DEVICE)
+                         bidirectional=bidirectional, dropout=dropout).to(DEVICE)
         optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-        # 6) Train with early stopping (val F1-macro improves)
+        # 6) Train with early stopping (based on val F1/F2 score)
         best, patience = -1.0, 0
         for ep in range(1, max_epochs + 1):
             model.train()
@@ -198,24 +231,36 @@ def train_and_eval_lstm(
                 loss = criterion(model(xb), yb)
                 optim.zero_grad(); loss.backward(); optim.step()
 
-            # Validate using F1-macro (balances precision/recall and classes)
+            # Validate
             model.eval()
             with torch.no_grad():
                 vscores, vtrue = [], []
                 for xb, yb in val_loader:
                     vscores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
                     vtrue.append(yb.numpy())
-                vscores = np.concatenate(vscores); vtrue = np.concatenate(vtrue)
-                # Convert logits → probabilities via sigmoid, then threshold at 0.5
-                vpred = (1/(1+np.exp(-vscores)) >= 0.5).astype(int)
-                val_f1m = f1_score(vtrue, vpred, average="macro")
 
-            print(f"[Epoch {ep:02d}] Val F1-macro={val_f1m:.4f}")
-            if val_f1m > best + 1e-4:
-                best, patience = val_f1m, 0
+                vscores = np.concatenate(vscores).ravel()  # flatten
+                vtrue   = np.concatenate(vtrue).ravel()
+
+            vprobs = expit(np.clip(vscores, -20, 20))  # numerically stable sigmoid
+
+            # Use CV-averaged threshold for stability
+            stable_thr, thr_list = find_stable_threshold(vtrue, vprobs, beta=2.0, n_splits=5)
+            vpred = (vprobs >= stable_thr).astype(int)
+
+            vF2 = fbeta_score(vtrue, vpred, beta=2.0, average="binary", zero_division=0)
+            vAP = average_precision_score(vtrue, vprobs)
+            metric_for_early_stop = vF2
+
+            print(f"[Epoch {ep:02d}] Val AP={vAP:.4f} | Val F2={vF2:.4f} @thr={stable_thr:.3f}")
+
+            if metric_for_early_stop > best + 1e-4:
+                best, patience = metric_for_early_stop, 0
                 MODELS_DIR.mkdir(parents=True, exist_ok=True)
                 torch.save(model.state_dict(), MODELS_DIR / "lstm_cls.pt")
                 joblib.dump(scaler, MODELS_DIR / "lstm_cls_scaler.joblib")
+                with open(MODELS_DIR / "lstm_cls_best_thr.txt", "w") as f:
+                    f.write(str(stable_thr))
             else:
                 patience += 1
                 if patience >= early_patience:
@@ -229,14 +274,47 @@ def train_and_eval_lstm(
             for xb, yb in test_loader:
                 scores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
                 ytrue.append(yb.numpy())
-            scores = np.concatenate(scores); ytrue = np.concatenate(ytrue)
-            ypred = (1/(1+np.exp(-scores)) >= 0.5).astype(int)
 
-        acc = accuracy_score(ytrue, ypred)
-        f1m = f1_score(ytrue, ypred, average="macro")
+            scores = np.concatenate(scores).ravel()
+            ytrue  = np.concatenate(ytrue).ravel()
+
+        probs = expit(np.clip(scores, -20, 20))
+
+        # Use the best threshold computed from val
+        with open(MODELS_DIR / "lstm_cls_best_thr.txt") as f:
+            best_thr = float(f.read().strip())
+
+        print(f"[INFO] CV thresholds={thr_list}, using stable_thr={best_thr:.3f}")
+        ypred = (probs >= best_thr).astype(int)
+
+
+        # --- Metrics ---
+        acc  = accuracy_score(ytrue, ypred)
+        f1m  = f1_score(ytrue, ypred, average="binary")
+        prec = precision_score(ytrue, ypred, average="binary", zero_division=0)
+        rec  = recall_score(ytrue, ypred, average="binary", zero_division=0)
+        f2_bin   = fbeta_score(ytrue, ypred, beta=2.0, average="binary", zero_division=0)
+        ap = average_precision_score(ytrue, probs)
+
         print("Classification report:\n", classification_report(ytrue, ypred, digits=4))
         print("Confusion matrix:\n", confusion_matrix(ytrue, ypred))
-        return {"task":"cls","model":"LSTM","accuracy":float(acc),"f1_macro":float(f1m)}
+        print(f"Accuracy:  {acc:.4f}")
+        print(f"F1-macro: {f1m:.4f}")
+        print(f"Precision: {prec:.4f}")
+        print(f"Recall:    {rec:.4f}")
+        print(f"[TEST] PR-AUC(Leak)={ap:.4f} | F2(Leak)={f2_bin:.4f} | F1(Leak)={f1m:.4f} | "
+        f"Precision(Leak)={prec:.4f} | Recall(Leak)={rec:.4f} | thr={best_thr:.3f}")
+
+        return {
+            "task": "cls",
+            "model": "LSTM",
+            "accuracy": float(acc),
+            "f1_macro": float(f1m),
+            "precision": float(prec),
+            "recall": float(rec),
+            "f2_leak": float(f2_bin)
+        }
+
     #endregion
 
     #region Forecast Workflow
@@ -284,7 +362,7 @@ def train_and_eval_lstm(
 
         # 6) Model / optimizer / loss for regression
         model = LSTMHead(in_dim=1, hidden=hidden, num_layers=num_layers,
-                         bidirectional=bidirectional, dropout=0.1).to(DEVICE)
+                         bidirectional=bidirectional, dropout=dropout).to(DEVICE)
         optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         criterion = nn.MSELoss()
 
@@ -448,6 +526,58 @@ def str2bool(v: str) -> bool:
     # Convenience parser for true/false flags in CLI
     return v.lower() in {"1","true","t","yes","y"}
 
+
+def objective(trial, data_dir: Path, seed: int = 42):
+    """
+    Optuna objective for classification task.
+    Returns best validation F2 (class=leak).
+    """
+
+    # 1. LSTM architecture
+    hidden        = trial.suggest_categorical("hidden", [64, 96, 128, 160, 192, 256, 320])
+    num_layers    = trial.suggest_int("num_layers", 1, 3)
+    bidirectional = trial.suggest_categorical("bidirectional", [False, True])
+    dropout       = trial.suggest_float("dropout", 0.0, 0.5)
+
+    # 2. Sequence setup
+    window        = trial.suggest_categorical("window", [12, 24, 36, 48, 72])  # try longer context
+    stride        = trial.suggest_categorical("stride", [1, 2, 3])
+
+    # 3. Optimization
+    lr            = trial.suggest_float("lr", 5e-5, 5e-3, log=True)
+    weight_decay  = trial.suggest_float("weight_decay", 1e-7, 1e-3, log=True)
+    batch_size    = trial.suggest_categorical("batch_size", [128, 256, 512, 1024])
+
+    # 4. Leak injection knobs (data augmentation for robustness)
+    n_segments_min = trial.suggest_int("n_segments_min", 1, 3)
+    n_segments_max = trial.suggest_int("n_segments_max", 3, 6)
+    min_len_frac   = trial.suggest_float("min_len_frac", 0.02, 0.1)
+
+    # Call training function
+    result = train_and_eval_lstm(
+        data_dir=data_dir,
+        task="cls",
+        window=window,
+        stride=stride,
+        hidden=hidden,
+        num_layers=num_layers,
+        bidirectional=bidirectional,
+        batch_size=batch_size,
+        lr=lr,
+        weight_decay=weight_decay,
+        max_epochs=30,        # give it more time
+        early_patience=6,     # allow patience for harder configs
+        seed=seed,
+        test_size=0.30,
+        dropout=dropout,
+        n_segments_min=n_segments_min,
+        n_segments_max=n_segments_max,
+        min_len_frac=min_len_frac,
+    )
+
+    # Optimize for F2 (recall-heavy)
+    return result.get("f2_leak", 0.0)
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="LSTM for leak detection — Classification or Forecasting.")
     p.add_argument("--data_dir", type=str, default=str(DATA_DIR))
@@ -456,7 +586,7 @@ if __name__ == "__main__":
     # Shared hyperparameters:
     # - window: sequence length (also lags in forecast mode)
     # - stride: how far we move the window each step (classification only)
-    p.add_argument("--window", type=int, default=24)
+    p.add_argument("--window", type=int, default=48)
     p.add_argument("--stride", type=int, default=1)
     p.add_argument("--hidden", type=int, default=64)
     p.add_argument("--num_layers", type=int, default=1)
@@ -464,7 +594,7 @@ if __name__ == "__main__":
     p.add_argument("--batch_size", type=int, default=256)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--weight_decay", type=float, default=1e-5)
-    p.add_argument("--max_epochs", type=int, default=50)
+    p.add_argument("--max_epochs", type=int, default=30)
     p.add_argument("--early_patience", type=int, default=8)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--test_size", type=float, default=0.30)
@@ -478,27 +608,53 @@ if __name__ == "__main__":
     # - residual_threshold_pct: what percentile of TRAIN residuals sets the alarm threshold.
     #   Higher => fewer but stronger alerts (higher precision, lower recall).
     p.add_argument("--residual_threshold_pct", type=float, default=85)
+    # Optuna Config
+    p.add_argument("--tune", type=str2bool, default=False,
+               help="Run Optuna hyperparameter tuning instead of normal training")
+    p.add_argument("--n_trials", type=int, default=100,
+                help="Number of Optuna trials if --tune is True")
+
 
     args = p.parse_args()
 
-    res = train_and_eval_lstm(
-        data_dir=Path(args.data_dir),
-        task=args.task,
-        window=args.window,
-        stride=args.stride,
-        hidden=args.hidden,
-        num_layers=args.num_layers,
-        bidirectional=str2bool(args.bidirectional),
-        batch_size=args.batch_size,
-        lr=args.lr,
-        weight_decay=args.weight_decay,
-        max_epochs=args.max_epochs,
-        early_patience=args.early_patience,
-        seed=args.seed,
-        test_size=args.test_size,
-        n_segments_min=args.n_segments_min,
-        n_segments_max=args.n_segments_max,
-        min_len_frac=args.min_len_frac,
-        residual_threshold_pct=args.residual_threshold_pct,
-    )
-    print(res)
+    if args.tune:
+        sampler = optuna.samplers.TPESampler(seed=args.seed)
+        pruner  = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=5)
+
+        study = optuna.create_study(direction="maximize", sampler=sampler, pruner=pruner,
+                                    study_name="lstm_cls_f2")
+        study.optimize(lambda trial: objective(trial, Path(args.data_dir), seed=args.seed),
+                    n_trials=args.n_trials)
+
+        print("\nBest Val-F2:", study.best_value)
+        print("Best params:", study.best_trial.params)
+        # Save results
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
+        out_path = MODELS_DIR / "optuna_best_cls.json"
+        import json
+        with open(out_path, "w") as f:
+            json.dump(dict(best_value=study.best_value,
+                        params=study.best_trial.params), f, indent=2)
+        print(f"Saved best params → {out_path}")
+    else:
+        res = train_and_eval_lstm(
+            data_dir=Path(args.data_dir),
+            task=args.task,
+            window=args.window,
+            stride=args.stride,
+            hidden=args.hidden,
+            num_layers=args.num_layers,
+            bidirectional=str2bool(args.bidirectional),
+            batch_size=args.batch_size,
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+            max_epochs=args.max_epochs,
+            early_patience=args.early_patience,
+            seed=args.seed,
+            test_size=args.test_size,
+            n_segments_min=args.n_segments_min,
+            n_segments_max=args.n_segments_max,
+            min_len_frac=args.min_len_frac,
+            residual_threshold_pct=args.residual_threshold_pct,
+        )
+        print(res)

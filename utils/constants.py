@@ -32,9 +32,12 @@ FORECAST_Y_COL    = "y"             # target used by forecasting builders
 
 # Calendar feature set
 CALENDAR_COLS = ["Hour", "DayOfWeek", "Month"]
+ROLLING_COLS =  ["roll6_mean", "roll24_mean",
+                "roll6_std", "roll24_std",
+                "rel_to_roll24"]
 
 # Baseline CLS features (used by tabular cls models)
-CLS_FEATURE_COLS = [VOLUME_READING_COL, *CALENDAR_COLS, DELTA_VOLUME_COL]
+CLS_FEATURE_COLS = [*CALENDAR_COLS, *ROLLING_COLS, DELTA_VOLUME_COL]
 
 # --------------------
 # Default data knobs (shared)
@@ -87,7 +90,7 @@ GRU_DEFAULTS = dict(
     seq_len=24,
     stride=1,
     batch_size=256,
-    epochs=20,
+    epochs=10,
     lr=1e-3,
     patience=8,
 )
