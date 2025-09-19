@@ -35,17 +35,6 @@ from utils.DataAggregation import (
 def parse_int_list(s: str) -> tuple[int, ...]:
     return tuple(int(x) for x in s.split(",") if x.strip())
 
-def get_feature_cols_for_task(df: pd.DataFrame, task: str) -> list[str]:
-    if task == "cls":
-        # baseline tabular classification features from constants
-        return list(CLS_FEATURE_COLS)
-    # forecast: lag_* and roll* (+ calendar if present)
-    cols = [c for c in df.columns if c.startswith("lag_") or c.startswith("roll")]
-    for cal in CALENDAR_COLS:
-        if cal in df.columns:
-            cols.append(cal)
-    return cols
-
 def prepare_Xy(df: pd.DataFrame, feature_cols: list[str], task: str):
     X = df[feature_cols].to_numpy(dtype=np.float32)
     if task == "cls":
@@ -88,7 +77,6 @@ def eval_forecasting(
         "train_residual_threshold": thr,
         **det_metrics
     }
-
 def train_and_eval_svm(
     data_dir: Path,
     # --- TASK SWITCH ---
@@ -118,6 +106,7 @@ def train_and_eval_svm(
     experiment: str = "LeakDetection-SVM",
     run_name: str | None = None,
 ):
+    np.random.seed(seed)
     # ----------------------------
     # 1) Build dataset
     # ----------------------------
@@ -144,30 +133,17 @@ def train_and_eval_svm(
             forecast_include_labels=True
         )
 
+    feature_cols = list(CLS_FEATURE_COLS)
     # ----------------------------
     # 2) Split
     # ----------------------------
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
-
-    if task == "cls":
-        # Ensure both classes exist
-        assert train_df[LEAK_FLAG_COL].nunique() == 2, \
-            "Train has no leak samples — increase leak_fraction or reduce test_size."
-        assert test_df[LEAK_FLAG_COL].nunique() == 2, \
-            "Test has no leak samples — adjust split or segment parameters."
-
-        if max_train_samples is not None and len(train_df) > max_train_samples:
-            per_cls = max(1, max_train_samples // 2)
-            train_df = (train_df.groupby(LEAK_FLAG_COL, group_keys=False)
-                                .apply(lambda x: x.sample(min(len(x), per_cls), random_state=42)))
-
     # ----------------------------
     # 3) Scale on TRAIN only
     # ----------------------------
-    feature_cols = get_feature_cols_for_task(df, task)
-    train_df, test_df, scaler = scale_on_train(train_df, test_df, feature_cols)
-    X_train, y_train = prepare_Xy(train_df, feature_cols, task)
-    X_test,  y_test  = prepare_Xy(test_df,  feature_cols, task)
+    train_df_scaled, test_df_scaled, scaler = scale_on_train(train_df, test_df, feature_cols)
+    X_train, y_train = prepare_Xy(train_df_scaled, feature_cols, task)
+    X_test,  y_test  = prepare_Xy(test_df_scaled,  feature_cols, task)
 
     # ----------------------------
     # 4) Model
@@ -208,11 +184,13 @@ def train_and_eval_svm(
     if task == "cls":
         y_pred = model.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
-        f1m = f1_score(y_test, y_pred, average="macro")
+        f1m = f1_score(y_test, y_pred, average="binary")
         cr_dict = classification_report(y_test, y_pred, output_dict=True)
         cm = confusion_matrix(y_test, y_pred)
+        prec = precision_score(y_test, y_pred, average="binary", zero_division=0)
+        rec  = recall_score(y_test, y_pred, average="binary", zero_division=0)
 
-        print(f"[CLS] Accuracy: {acc:.4f} | F1-macro: {f1m:.4f}")
+        print(f"[CLS] Accuracy: {acc:.4f} | F1-macro: {f1m:.4f} | Precision: {prec:.4f} | Recall: {rec:.4f}")
         print("Classification report:\n", classification_report(y_test, y_pred, digits=4))
         print("Confusion matrix:\n", cm)
 
@@ -249,8 +227,6 @@ def train_and_eval_svm(
     scaler_path = MODELS_DIR / f"svm_{suffix}_scaler.joblib"
     joblib.dump(model, model_path)
     joblib.dump(scaler, scaler_path)
-    print(f"[INFO] Saved model to: {model_path}")
-    print(f"[INFO] Saved scaler to: {scaler_path}")
 
     if task == "cls":
         cm_path = MODELS_DIR / f"svm_{suffix}_confusion_matrix.csv"
@@ -283,12 +259,11 @@ if __name__ == "__main__":
     parser.add_argument("--C", type=float, default=1.0)
     parser.add_argument("--gamma", type=str, default="scale")
     parser.add_argument("--cache_size", type=int, default=200)
-    parser.add_argument("--max_iter", type=int, default=50000)
-    parser.add_argument("--max_train_samples", type=int, default=None)
+    parser.add_argument("--max_iter", type=int, default=30000)
 
     # dataset builder knobs (shared)
-    parser.add_argument("--n_segments_min", type=int, default=1)
-    parser.add_argument("--n_segments_max", type=int, default=3)
+    parser.add_argument("--n_segments_min", type=int, default=2)
+    parser.add_argument("--n_segments_max", type=int, default=5)
     parser.add_argument("--min_len_frac", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--test_size", type=float, default=0.30)
@@ -316,7 +291,6 @@ if __name__ == "__main__":
         gamma=args.gamma,
         cache_size=args.cache_size,
         max_iter=args.max_iter,
-        max_train_samples=args.max_train_samples,
         n_segments_min=args.n_segments_min,
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,

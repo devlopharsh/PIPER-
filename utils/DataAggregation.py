@@ -255,12 +255,6 @@ def inject_random_leak_segments(
                     delta = leak_fraction * avg_flow
 
                     extra_delta[seg] = delta
-    #                 print(
-    #     f"[Leak injection] Meter={g[METER_ID_COL].iloc[0]} | "
-    #     f"SegLen={seg_len} | avg_flow={avg_flow:.2f} | "
-    #     f"alpha={alpha:.3f} | gamma={gamma:.3f} | "
-    #     f"min_leak={delta.min():.2f} | max_leak={delta.max():.2f}"
-    # )
 
             extra_cum = np.cumsum(extra_delta)
             out[VOLUME_READING_COL] = out[VOLUME_COL] + extra_cum

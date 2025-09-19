@@ -54,7 +54,6 @@ class GRUHead(nn.Module):
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- Reuse your existing dataset classes from LSTM code ---
 class SeqDatasetCls(torch.utils.data.Dataset):
     def __init__(self, df, feature_cols, window=24, stride=1):
         self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
