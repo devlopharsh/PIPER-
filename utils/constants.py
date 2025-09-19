@@ -3,7 +3,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
+from dataclasses import dataclass
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -66,34 +66,45 @@ MLP_DEFAULTS = dict(
     dropout=0.1,
     batch_size=256,
     lr=1e-3,
-    weight_decay=1e-4,
-    max_epochs=20,
-    early_patience=6,
+    weight_decay=1e-5,
+    max_epochs=30,
+    early_patience=8,
 )
 
 # LSTM
-LSTM_DEFAULTS = dict(
-    window=24,
-    stride=1,
-    hidden=64,
-    num_layers=1,
-    bidirectional=False,
-    batch_size=256,
-    lr=1e-3,
-    weight_decay=1e-5,
-    max_epochs=20,
-    early_patience=4,
-)
+@dataclass(frozen=True)
+class LSTMDefaults:
+    window: int = 48
+    stride: int = 1
+    hidden: int = 64
+    num_layers: int = 1
+    bidirectional: bool = False
+    batch_size: int = 256
+    max_epochs: int = 30
+    dropout: float = 0.2
+    lr: float = 1e-3
+    weight_decay: float = 1e-5
+    early_patience: int = 8
 
-# GRU (keras)
-GRU_DEFAULTS = dict(
-    seq_len=24,
-    stride=1,
-    batch_size=256,
-    epochs=10,
-    lr=1e-3,
-    patience=8,
-)
+LSTM_DEFAULTS = LSTMDefaults()
+
+# GRU 
+@dataclass(frozen=True)
+class GRUDefaults:
+    window: int = 48
+    stride: int = 1
+    hidden: int = 64
+    num_layers: int = 1
+    bidirectional: bool = False
+    batch_size: int = 256
+    max_epochs: int = 30
+    dropout: float = 0.2
+    lr: float = 1e-3
+    weight_decay: float = 1e-5
+    early_patience: int = 8
+
+GRU_DEFAULTS = GRUDefaults()
+
 
 # SVM / MLflow (only used where relevant)
 MLFLOW_URI_DEFAULT = "file:./mlruns"

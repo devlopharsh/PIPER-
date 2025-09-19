@@ -22,7 +22,8 @@ from utils.constants import (
     DATA_DIR, MODELS_DIR,
     METER_ID_COL, TIMESTAMP_COL,
     LEAK_FLAG_COL, FORECAST_Y_COL,
-    CLS_FEATURE_COLS, DELTA_VOLUME_COL
+    CLS_FEATURE_COLS, DELTA_VOLUME_COL, LSTM_DEFAULTS,
+    TEST_SIZE_DEFAULT, RANDOM_SEED_DEFAULT
 )
 from utils.DataAggregation import (
     build_aggregated_dataset,
@@ -216,14 +217,17 @@ def train_and_eval_lstm(
             vprobs = expit(np.clip(vscores, -20, 20))  # numerically stable sigmoid
 
             # Use CV-averaged threshold for stability
-            stable_thr, thr_list = find_stable_threshold(vtrue, vprobs, beta=2.0, n_splits=5)
+            beta = 1
+            stable_thr, thr_list = find_stable_threshold(vtrue, vprobs, beta=beta, n_splits=5)
             vpred = (vprobs >= stable_thr).astype(int)
 
-            vF2 = fbeta_score(vtrue, vpred, beta=2.0, average="binary", zero_division=0)
+            vF = fbeta_score(vtrue, vpred, beta=beta, average="binary", zero_division=0)
             vAP = average_precision_score(vtrue, vprobs)
-            metric_for_early_stop = vF2
 
-            print(f"[Epoch {ep:02d}] Val AP={vAP:.4f} | Val F2={vF2:.4f} @thr={stable_thr:.3f}")
+            # keep AP for early stopping (threshold-free)
+            metric_for_early_stop = vF
+
+            print(f"[Epoch {ep:02d}] Val AP={vAP:.4f} | Val F{beta}={vF:.4f} @thr={stable_thr:.3f}")
 
             if metric_for_early_stop > best + 1e-4:
                 best, patience = metric_for_early_stop, 0
@@ -285,7 +289,6 @@ def train_and_eval_lstm(
             "recall": float(rec),
             "f2_leak": float(f2_bin)
         }
-
     #endregion
 
     #region Forecast Workflow
@@ -557,18 +560,19 @@ if __name__ == "__main__":
     # Shared hyperparameters:
     # - window: sequence length (also lags in forecast mode)
     # - stride: how far we move the window each step (classification only)
-    p.add_argument("--window", type=int, default=48)
-    p.add_argument("--stride", type=int, default=1)
-    p.add_argument("--hidden", type=int, default=64)
-    p.add_argument("--num_layers", type=int, default=1)
-    p.add_argument("--bidirectional", type=str, default="false")
-    p.add_argument("--batch_size", type=int, default=256)
-    p.add_argument("--lr", type=float, default=1e-3)
-    p.add_argument("--weight_decay", type=float, default=1e-5)
-    p.add_argument("--max_epochs", type=int, default=30)
-    p.add_argument("--early_patience", type=int, default=8)
-    p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--test_size", type=float, default=0.30)
+    p.add_argument("--window", type=int, default=LSTM_DEFAULTS.window)
+    p.add_argument("--stride", type=int, default=LSTM_DEFAULTS.stride)
+    p.add_argument("--hidden", type=int, default=LSTM_DEFAULTS.hidden)
+    p.add_argument("--num_layers", type=int, default=LSTM_DEFAULTS.num_layers)
+    p.add_argument("--bidirectional", action="store_true", default=LSTM_DEFAULTS.bidirectional)
+    p.add_argument("--dropout", type=float, default=LSTM_DEFAULTS.dropout)
+    p.add_argument("--batch_size", type=int, default=LSTM_DEFAULTS.batch_size)
+    p.add_argument("--lr", type=float, default=LSTM_DEFAULTS.lr)
+    p.add_argument("--weight_decay", type=float, default=LSTM_DEFAULTS.weight_decay)
+    p.add_argument("--max_epochs", type=int, default=LSTM_DEFAULTS.max_epochs)
+    p.add_argument("--early_patience", type=int, default=LSTM_DEFAULTS.early_patience)
+    p.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
+    p.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
 
     # Classification knobs (affect how synthetic leaks are injected):
     p.add_argument("--n_segments_min", type=int, default=1)
@@ -615,7 +619,7 @@ if __name__ == "__main__":
             stride=args.stride,
             hidden=args.hidden,
             num_layers=args.num_layers,
-            bidirectional=str2bool(args.bidirectional),
+            bidirectional=args.bidirectional,
             batch_size=args.batch_size,
             lr=args.lr,
             weight_decay=args.weight_decay,
