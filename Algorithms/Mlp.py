@@ -23,6 +23,10 @@ from utils.constants import (
     RANDOM_SEED_DEFAULT, TEST_SIZE_DEFAULT,
     RESIDUAL_THRESHOLD_PCT_DEFAULT,VOLUME_READING_COL, DELTA_VOLUME_COL
 )
+from utils.ThresholdComputer import find_stable_threshold
+from sklearn.metrics import average_precision_score, fbeta_score, precision_recall_curve
+from scipy.special import expit
+
 
 from utils.DataAggregation import (
     build_aggregated_dataset,
@@ -39,21 +43,6 @@ def set_seed(seed: int = RANDOM_SEED_DEFAULT) -> None:
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-
-def get_feature_cols_for_task(df: pd.DataFrame, task: str) -> List[str]:
-    """
-    For cls: fixed baseline features (CLS_FEATURE_COLS).
-    For forecast: all lag_* and roll* (+ calendar if present).
-    """
-    if task == "cls":
-        return list(CLS_FEATURE_COLS)
-
-    cols = [c for c in df.columns if c.startswith("lag_") or c.startswith("roll")]
-    for cal in CALENDAR_COLS:
-        if cal in df.columns:
-            cols.append(cal)
-    return cols
 
 
 def to_xy(df: pd.DataFrame, feature_cols: List[str], task: str):
@@ -143,7 +132,7 @@ def train_and_eval_mlp(
     train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
 
     # ------------------------- 3) Scale on TRAIN-CORE only -------------------------
-    feat_cols = get_feature_cols_for_task(df, task)
+    feat_cols = list(CLS_FEATURE_COLS)
     tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feat_cols)
     val_scaled = val_df.copy();  val_scaled[feat_cols]  = scaler.transform(val_scaled[feat_cols])
     te_scaled  = test_df.copy(); te_scaled[feat_cols]   = scaler.transform(te_scaled[feat_cols])
@@ -185,17 +174,27 @@ def train_and_eval_mlp(
                     xb = xb.to(DEVICE)
                     logits.append(model(xb).cpu().numpy())
                     ys.append(yb.numpy())
-                y_scores = np.concatenate(logits)
-                y_true   = np.concatenate(ys)
-                y_pred   = (1/(1+np.exp(-y_scores)) >= 0.5).astype(int)
-                val_f1m  = f1_score(y_true, y_pred, average="macro")
+            y_scores = np.concatenate(logits).ravel()
+            y_true   = np.concatenate(ys).ravel()
 
-            print(f"[Epoch {ep:02d}] Val F1-macro={val_f1m:.4f}")
-            if val_f1m > best_metric + 1e-4:
-                best_metric = val_f1m; patience = 0
+            y_probs = expit(np.clip(y_scores, -20, 20))
+
+            beta = 1
+            stable_thr, thr_list = find_stable_threshold(y_true, y_probs, beta=beta, n_splits=5)
+            y_pred = (y_probs >= stable_thr).astype(int)
+
+            val_fbeta = fbeta_score(y_true, y_pred, beta=beta, average="binary", zero_division=0)
+            val_ap    = average_precision_score(y_true, y_probs)
+            print(f"[Epoch {ep:02d}] Val AP={val_ap:.4f} | Val F{beta}={val_fbeta:.4f} @thr={stable_thr:.3f}")
+
+            metric = val_fbeta
+            if metric > best_metric + 1e-4:
+                best_metric = metric; patience = 0
                 MODELS_DIR.mkdir(parents=True, exist_ok=True)
                 torch.save(model.state_dict(), MODELS_DIR / "mlp_cls.pt")
                 joblib.dump(scaler, MODELS_DIR / "mlp_cls_scaler.joblib")
+                with open(MODELS_DIR / "mlp_cls_best_thr.txt", "w") as f:
+                    f.write(str(stable_thr))
             else:
                 patience += 1
                 if patience >= early_patience:
@@ -204,6 +203,9 @@ def train_and_eval_mlp(
 
         # ---- Final test ----
         model.load_state_dict(torch.load(MODELS_DIR / "mlp_cls.pt", map_location=DEVICE))
+        with open(MODELS_DIR / "mlp_cls_best_thr.txt") as f:
+            best_thr = float(f.read().strip())
+
         model.eval()
         with torch.no_grad():
             logits, ys = [], []
@@ -211,14 +213,18 @@ def train_and_eval_mlp(
                 xb = xb.to(DEVICE)
                 logits.append(model(xb).cpu().numpy())
                 ys.append(yb.numpy())
-            y_scores = np.concatenate(logits)
-            y_true   = np.concatenate(ys)
-            y_pred   = (1/(1+np.exp(-y_scores)) >= 0.5).astype(int)
+        y_scores = np.concatenate(logits).ravel()
+        y_true   = np.concatenate(ys).ravel()
+        y_probs  = expit(np.clip(y_scores, -20, 20))
+        y_pred   = (y_probs >= best_thr).astype(int)
+        print(f"[INFO] CV thresholds={thr_list}, using stable_thr={best_thr:.3f}")
 
-        acc = float(accuracy_score(y_true, y_pred))
-        f1m = float(f1_score(y_true, y_pred, average="macro"))
+        acc  = float(accuracy_score(y_true, y_pred))
+        f1b  = float(f1_score(y_true, y_pred, average="binary"))
         prec = float(precision_score(y_true, y_pred, zero_division=0))
         rec  = float(recall_score(y_true, y_pred, zero_division=0))
+        ap   = float(average_precision_score(y_true, y_probs))
+        f2   = float(fbeta_score(y_true, y_pred, beta=2.0, zero_division=0))
         cm   = confusion_matrix(y_true, y_pred).tolist()
         report = classification_report(y_true, y_pred, digits=4, zero_division=0)
 
@@ -227,9 +233,12 @@ def train_and_eval_mlp(
             "accuracy": acc,
             "precision": prec,
             "recall": rec,
-            "f1_macro": f1m,
+            "f1_binary": f1b,     # <- rename so it’s not mislabeled
+            "f2_binary": f2,
+            "ap": ap,             # PR-AUC
             "cm": cm,
             "report": report,
+            "thr": best_thr,
             "model_path": str(MODELS_DIR / "mlp_cls.pt"),
             "scaler_path": str(MODELS_DIR / "mlp_cls_scaler.joblib"),
         }
