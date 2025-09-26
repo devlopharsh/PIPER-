@@ -32,13 +32,17 @@ FORECAST_Y_COL    = "y"             # target used by forecasting builders
 
 # Calendar feature set
 CALENDAR_COLS = ["Hour", "DayOfWeek", "Month"]
-ROLLING_COLS =  ["roll6_mean", "roll24_mean",
-                "roll6_std", "roll24_std",
-                "rel_to_roll24"]
+ROLLING_COLS = [
+    "roll6_mean", "roll24_mean", "roll168_mean", "roll720_mean",
+    "roll6_std",  "roll24_std",  "roll168_std",  "roll720_std",
+    # "rel_to_roll24"  # optional
+]
+
 
 # Baseline CLS features (used by tabular cls models)
 CLS_FEATURE_COLS = [*CALENDAR_COLS, *ROLLING_COLS, DELTA_VOLUME_COL]
 
+FORECAST_COLS = [*CALENDAR_COLS, *ROLLING_COLS,]
 # --------------------
 # Default data knobs (shared)
 # --------------------
@@ -74,14 +78,14 @@ MLP_DEFAULTS = dict(
 # LSTM
 @dataclass(frozen=True)
 class LSTMDefaults:
-    window: int = 48
+    window: int = 2*24
     stride: int = 1
     hidden: int = 64
-    num_layers: int = 1
+    num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 30
-    dropout: float = 0.2
+    max_epochs: int = 40
+    dropout: float = 0.25
     lr: float = 1e-3
     weight_decay: float = 1e-5
     early_patience: int = 8
@@ -97,7 +101,7 @@ class GRUDefaults:
     num_layers: int = 1
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 30
+    max_epochs: int = 60
     dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5

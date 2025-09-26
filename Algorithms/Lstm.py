@@ -76,19 +76,29 @@ class SeqDatasetCls(Dataset):
 
 class LagSeqDatasetForecast(Dataset):
     """
-    Forecasting dataset: each row is already a lag vector.
-      X = [lag_k,..., lag_2, lag_1] for the chosen target (ΔVolume here),
-      y = FORECAST_Y_COL (what we want to predict at time t).
-
-    We reshape X to [T, F] = [lags, 1] to look like a univariate sequence for the LSTM.
+    Multivariate sequence: X:[N, T, F], where
+      - channel 0 = lagged target (ΔVolume)
+      - channel 1.. = static features broadcast across T (e.g., roll6_mean, roll24_mean, Hour, DayOfWeek)
     """
-    def __init__(self, df: pd.DataFrame, lag_cols: list[str]):
-        X = df[lag_cols].to_numpy(dtype=np.float32)                     # shape [N, L]
-        self.X = torch.from_numpy(X.reshape(len(df), len(lag_cols), 1)) # shape [N, T=L, F=1]
+    def __init__(self, df: pd.DataFrame, lag_cols: list[str], static_cols: list[str] | None = None):
+        L = len(lag_cols)
+        # base lag channel
+        Xlag = df[lag_cols].to_numpy(dtype=np.float32).reshape(len(df), L, 1)  # [N, T, 1]
+
+        if static_cols:
+            Xstat = df[static_cols].to_numpy(dtype=np.float32)                 # [N, S]
+            # broadcast to [N, T, S]
+            Xstat_rep = np.repeat(Xstat[:, None, :], L, axis=1)
+            X = np.concatenate([Xlag, Xstat_rep], axis=2)                      # [N, T, 1+S]
+        else:
+            X = Xlag
+
+        self.X = torch.from_numpy(X)
         self.y = torch.from_numpy(df[FORECAST_Y_COL].to_numpy(dtype=np.float32))
 
     def __len__(self): return len(self.y)
     def __getitem__(self, i): return self.X[i], self.y[i]
+
 #endregion
 
 
@@ -118,6 +128,59 @@ class LSTMHead(nn.Module):
         out = self.fc(out)           # [B, T, 1]
         return out.squeeze(-1)       # [B, T]
 #endregion
+
+
+class TemporalAttention(nn.Module):
+    """
+    Simple additive attention over timesteps.
+    Given LSTM outputs H:[B, T, Hdim], produce attention weights α:[B, T]
+    and a context vector c = sum_t α_t * H_t.
+    """
+    def __init__(self, hidden_dim: int):
+        super().__init__()
+        self.score = nn.Linear(hidden_dim, 1)  # per-timestep score
+
+    def forward(self, H: torch.Tensor, mask: torch.Tensor | None = None):
+        """
+        H: [B, T, Hdim]
+        mask (optional): [B, T] boolean mask where False = pad to be ignored
+        """
+        e = self.score(H).squeeze(-1)  # [B, T]
+        if mask is not None:
+            e = e.masked_fill(~mask, -1e9)  # push masked steps to ~0 prob
+        alpha = torch.softmax(e, dim=1)     # [B, T]
+        # context = Σ_t α_t * H_t
+        context = torch.bmm(alpha.unsqueeze(1), H).squeeze(1)  # [B, Hdim]
+        return context, alpha
+
+
+class LSTMAttentionRegressor(nn.Module):
+    """
+    Forecast y_t from a window of past lags x_{t-L..t-1} using:
+      LSTM -> temporal attention over timesteps -> linear head -> scalar.
+    Produces a **single** prediction per sample (shape [B]), matching your target.
+    """
+    def __init__(self, in_dim: int, hidden: int = 64, num_layers: int = 1,
+                 bidirectional: bool = False, dropout: float = 0.0):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=in_dim, hidden_size=hidden, num_layers=num_layers,
+            bidirectional=bidirectional, batch_first=True,
+            dropout=0.0 if num_layers == 1 else dropout
+        )
+        out_dim = hidden * (2 if bidirectional else 1)
+        self.attn = TemporalAttention(out_dim)
+        self.fc = nn.Linear(out_dim, 1)
+
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None):
+        """
+        x: [B, T, F]
+        mask (optional): [B, T] bool (True for valid steps); not required for fixed windows.
+        """
+        H, _ = self.lstm(x)                 # [B, T, Hdim]
+        ctx, alpha = self.attn(H, mask)     # ctx: [B, Hdim], alpha: [B, T]
+        y_hat = self.fc(ctx).squeeze(-1)    # [B]
+        return y_hat, alpha                 # return weights for interpretability
 
 #region Model Training & Evaluation
 def train_and_eval_lstm(
@@ -307,13 +370,17 @@ def train_and_eval_lstm(
 
         # Keep *only* lag columns as sequence features
         LAG_COLS = [f"lag_{k}" for k in range(window, 0, -1)]
+        STATIC_COLS = [c for c in train_df.columns if c.startswith("roll") or c in ("Hour","DayOfWeek","Month")]
 
         # 3) SCALE features on TRAIN-CORE ONLY (avoid leakage)
-        tr_scaled, _dummy, scaler_X = scale_on_train(train_core_df, train_core_df, LAG_COLS)
+        ALL_INPUT_COLS = LAG_COLS + STATIC_COLS
+
+        tr_scaled, _dummy, scaler_X = scale_on_train(train_core_df, train_core_df, ALL_INPUT_COLS)
         val_scaled = val_df.copy()
-        val_scaled[LAG_COLS] = scaler_X.transform(val_scaled[LAG_COLS])
+        val_scaled[ALL_INPUT_COLS] = scaler_X.transform(val_scaled[ALL_INPUT_COLS])
         test_scaled = test_df.copy()
-        test_scaled[LAG_COLS] = scaler_X.transform(test_scaled[LAG_COLS])
+        test_scaled[ALL_INPUT_COLS] = scaler_X.transform(test_scaled[ALL_INPUT_COLS])
+
 
         # 4) SCALE target (y) as well (helps LSTM training stability)
         from sklearn.preprocessing import StandardScaler
@@ -323,9 +390,10 @@ def train_and_eval_lstm(
         test_scaled[FORECAST_Y_COL]= y_scaler.transform(test_scaled[[FORECAST_Y_COL]])
 
         # 5) Build datasets/loaders
-        train_ds = LagSeqDatasetForecast(tr_scaled, LAG_COLS)
-        val_ds   = LagSeqDatasetForecast(val_scaled, LAG_COLS)
-        test_ds  = LagSeqDatasetForecast(test_scaled, LAG_COLS)
+        train_ds = LagSeqDatasetForecast(tr_scaled, LAG_COLS, static_cols=STATIC_COLS)
+        val_ds   = LagSeqDatasetForecast(val_scaled, LAG_COLS, static_cols=STATIC_COLS)
+        test_ds  = LagSeqDatasetForecast(test_scaled, LAG_COLS, static_cols=STATIC_COLS)
+
 
         if len(train_ds)==0 or len(val_ds)==0 or len(test_ds)==0:
             raise RuntimeError("Empty split in forecast mode. Check window/lags or data coverage.")
@@ -335,10 +403,22 @@ def train_and_eval_lstm(
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
         # 6) Model / optimizer / loss for regression
-        model = LSTMHead(in_dim=1, hidden=hidden, num_layers=num_layers,
-                         bidirectional=bidirectional, dropout=dropout).to(DEVICE)
+        xb, yb = next(iter(train_loader))
+        print("Batch shape:", xb.shape)  # should be [B, T, F]
+
+        in_dim = xb.shape[-1]
+        model = LSTMAttentionRegressor(
+            in_dim=in_dim,
+            hidden=hidden,
+            num_layers=num_layers,
+            bidirectional=bidirectional,
+            dropout=dropout
+        ).to(DEVICE)
+
         optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.MSELoss()
+        # criterion = nn.MSELoss()
+        criterion = nn.SmoothL1Loss(beta=1.0)  # Huber; beta is the transition point
+
 
         # 7) Train with early stopping on Val RMSE
         best_rmse, patience = np.inf, 0
@@ -348,8 +428,8 @@ def train_and_eval_lstm(
             for xb, yb in train_loader:
                 xb = xb.to(DEVICE, dtype=torch.float32)
                 yb = yb.to(DEVICE, dtype=torch.float32)
-                pred = model(xb)
-                loss = criterion(pred, yb)
+                pred, _ = model(xb)                # pred: [B]
+                loss = criterion(pred, yb)         # yb:   [B]
                 optim.zero_grad(); loss.backward(); optim.step()
                 train_losses.append(loss.item())
             avg_loss = np.mean(train_losses)
@@ -359,7 +439,8 @@ def train_and_eval_lstm(
             with torch.no_grad():
                 pv, tv = [], []
                 for xb, yb in val_loader:
-                    pv.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
+                    p_batch, _ = model(xb.to(DEVICE, dtype=torch.float32))
+                    pv.append(p_batch.cpu().numpy())
                     tv.append(yb.numpy())
                 pv = np.concatenate(pv); tv = np.concatenate(tv)
                 mae = mean_absolute_error(tv, pv)
@@ -375,6 +456,25 @@ def train_and_eval_lstm(
                 patience += 1
                 if patience >= early_patience:
                     print("[INFO] Early stopping."); break
+        
+        # Residual-based leak detection
+        # 1) Compute residuals on TRAIN (scaled) to set a threshold at a percentile.
+        # 2) Apply same threshold to TEST residuals (scaled) to get leak flags.
+        # Why scaled? Because threshold was learned in scaled space; keep it consistent.
+        model.load_state_dict(torch.load(MODELS_DIR / "lstm_forecast.pt", map_location=DEVICE))
+        model.eval()
+        with torch.no_grad():
+            pt, tt = [], []
+            for xb, yb in train_loader:
+                p_batch, _ = model(xb.to(DEVICE, dtype=torch.float32))
+                pt.append(p_batch.cpu().numpy())
+                tt.append(yb.numpy())
+
+            yhat_tr_scaled = np.concatenate(pt)
+            y_tr_scaled    = np.concatenate(tt)
+
+        res_tr = np.abs(y_tr_scaled - yhat_tr_scaled)
+        thr = float(np.percentile(res_tr, residual_threshold_pct))
 
         # 8) Test regression metrics (in ORIGINAL UNITS for interpretability)
         model.load_state_dict(torch.load(MODELS_DIR / "lstm_forecast.pt", map_location=DEVICE))
@@ -382,7 +482,8 @@ def train_and_eval_lstm(
         with torch.no_grad():
             pt, tt = [], []
             for xb, yb in test_loader:
-                pred = model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy()
+                p_batch, _ = model(xb.to(DEVICE, dtype=torch.float32))
+                pred = p_batch.cpu().numpy()
                 pt.append(pred)
                 tt.append(yb.numpy())
             yhat_te_scaled = np.concatenate(pt)
@@ -396,28 +497,11 @@ def train_and_eval_lstm(
             rmse = float(np.sqrt(mean_squared_error(y_test, yhat_te)))
             print(f"[TEST] MAE={mae:.4f} RMSE={rmse:.4f}")
 
-
-            # Residual-based leak detection
-            # 1) Compute residuals on TRAIN (scaled) to set a threshold at a percentile.
-            # 2) Apply same threshold to TEST residuals (scaled) to get leak flags.
-            # Why scaled? Because threshold was learned in scaled space; keep it consistent.
-            det = {}
-            with torch.no_grad():
-                pt, tt = [], []
-                for xb, yb in train_loader:
-                    pred = model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy()
-                    pt.append(pred)
-                    tt.append(yb.numpy())
-                yhat_tr_scaled = np.concatenate(pt)
-                y_tr_scaled    = np.concatenate(tt)
-
-            res_tr = np.abs(y_tr_scaled - yhat_tr_scaled)          # TRAIN residuals (scaled)
-            thr = float(np.percentile(res_tr, residual_threshold_pct))  # e.g., 97.5th percentile
-
-            res_te = np.abs(y_test_scaled - yhat_te_scaled)        # TEST residuals (scaled)
-            pred_leak = (res_te >= thr).astype(int)                 # 1 = detected leak
+        res_te = np.abs(y_test_scaled - yhat_te_scaled)        # TEST residuals (scaled)
+        pred_leak = (res_te >= thr).astype(int)                 # 1 = detected leak
 
         # 9) If true leak labels are present, compute detection metrics
+        det = {}
         if LEAK_FLAG_COL in test_scaled.columns:
             gt_leak = test_scaled[LEAK_FLAG_COL].to_numpy()
             det = dict(

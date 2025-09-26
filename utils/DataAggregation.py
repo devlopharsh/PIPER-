@@ -76,11 +76,11 @@ def add_delta_volume(
 def add_rolling_features(
     df: pd.DataFrame,
     col: str = DELTA_VOLUME_COL,
-    windows: Tuple[int, ...] = (6, 24)
+    windows: Tuple[int, ...] = (6, 24, 168, 720)   # add week/month horizons
 ) -> pd.DataFrame:
     """
     Add rolling mean/std features of `col` per meter.
-    Example: 6-step and 24-step rolling stats of Delta_Volume.
+    Example: 6h, 24h, 7d (168h), 30d (720h).
     """
     df = df.sort_values([METER_ID_COL, TIMESTAMP_COL]).copy()
     for w in windows:
@@ -93,6 +93,7 @@ def add_rolling_features(
               .transform(lambda x: x.rolling(w, min_periods=1).std().fillna(0.0))
         )
     return df
+
 
 #endregion
 
@@ -280,7 +281,7 @@ def inject_random_leak_segments(
 #region  Forecasting builder
 def build_forecasting_frame(
     df_raw: pd.DataFrame,
-    target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
+    target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = DELTA_VOLUME_COL,
     lags: int = 24,
     rolling_windows: Tuple[int, ...] = (6, 24),
     include_labels: bool = False,   # label-free by default
@@ -298,8 +299,7 @@ def build_forecasting_frame(
         df[VOLUME_READING_COL] = df[VOLUME_COL]
 
     if target_col == DELTA_VOLUME_COL:
-        tmp = add_delta_volume(df, col=VOLUME_READING_COL, new_col=DELTA_VOLUME_COL)
-        df["TargetBase"] = tmp[DELTA_VOLUME_COL]
+        df["TargetBase"] = df[DELTA_VOLUME_COL]
     else:
         df["TargetBase"] = df[VOLUME_READING_COL]
 
@@ -422,22 +422,23 @@ def build_aggregated_dataset(
         )
         return df
 
-    # df_with_labels = inject_random_leak_segments(
-    #     raw,
-    #     leak_mode=leak_mode,
-    #     leak_share_total=0.20,
-    #     n_segments_range=n_segments_range,
-    #     min_len_frac=min_len_frac,
-    #     placement="tail",
-    #     test_fraction=test_fraction,
-    #     ensure_test_leak_abs_share=0.0,
-    # )
+    df_with_labels = inject_random_leak_segments(
+    raw,
+    leak_mode=leak_mode,
+    leak_share_total=0.05,
+    n_segments_range=n_segments_range,
+    min_len_frac=min_len_frac,
+    placement="tail",
+    test_fraction=test_fraction,
+    ensure_test_leak_abs_share=0,
+)
 
-    # return build_forecasting_frame(
-    #     df_with_labels,
-    #     target_col=target_col,
-    #     lags=lags,
-    #     rolling_windows=rolling_windows,
-    #     include_labels=forecast_include_labels,
-    # )
+    return build_forecasting_frame(
+        df_with_labels,
+        target_col=target_col,
+        lags=lags,
+        rolling_windows=(6, 24, 168, 720),  # add weekly + monthly
+        include_labels=forecast_include_labels,
+    )
+
 #endregion
