@@ -182,6 +182,99 @@ class LSTMAttentionRegressor(nn.Module):
         y_hat = self.fc(ctx).squeeze(-1)    # [B]
         return y_hat, alpha                 # return weights for interpretability
 
+
+from typing import Tuple, Dict
+
+def select_threshold_on_val(res_val: np.ndarray, y_val: np.ndarray, 
+                            grid: np.ndarray | None = None, beta: float = 2.0) -> Tuple[float, float]:
+    """
+    Pick residual threshold on the *validation* set to maximize F-beta.
+    Returns (best_threshold, best_Fbeta).
+    """
+    from sklearn.metrics import fbeta_score
+    if grid is None:
+        # wide sweep on percentiles of residuals
+        grid = np.percentile(res_val, np.linspace(70, 99.9, 120))
+    bestF, bestT = -1.0, grid[0]
+    for t in grid:
+        yhat = (res_val >= t).astype(int)
+        F = fbeta_score(y_val, yhat, beta=beta, zero_division=0)
+        if F > bestF:
+            bestF, bestT = F, t
+    return float(bestT), float(bestF)
+
+
+def per_meter_thresholds(val_df: pd.DataFrame, res_val: np.ndarray, beta: float = 2.0) -> Dict[int | str, float]:
+    """
+    Compute a threshold per meter on the *validation* split.
+    If a meter has only one class in val, fall back to global threshold.
+    """
+    thrs = {}
+    y_val_all = val_df[LEAK_FLAG_COL].to_numpy()
+    # global (fallback)
+    global_thr, _ = select_threshold_on_val(res_val, y_val_all, beta=beta)
+
+    for mid, idx in val_df.groupby(METER_ID_COL, sort=False).indices.items():
+        yv = y_val_all[idx]
+        rv = res_val[idx]
+        # if both classes exist we can optimize; else fallback
+        if (yv == 1).any() and (yv == 0).any():
+            t, _ = select_threshold_on_val(rv, yv, beta=beta)
+        else:
+            t = global_thr
+        thrs[mid] = t
+    return thrs
+
+
+def run_length_hysteresis(res: np.ndarray, thr_hi: float, k: int = 3, thr_lo: float | None = None) -> np.ndarray:
+    """
+    Alarm only if residuals exceed thr_hi for k consecutive steps.
+    Keep alarm until residuals drop below thr_lo (hysteresis).
+    """
+    if thr_lo is None:
+        thr_lo = 0.8 * thr_hi
+    out = np.zeros_like(res, dtype=int)
+    cnt = 0
+    alarm = False
+    for i, r in enumerate(res):
+        if alarm:
+            alarm = r >= thr_lo
+        else:
+            cnt = cnt + 1 if r >= thr_hi else 0
+            alarm = cnt >= k
+        out[i] = int(alarm)
+    return out
+
+
+# (Optional) Event-level evaluation (counts a leak segment as TP if any point is flagged)
+def segments_from_binary(x: np.ndarray) -> list[Tuple[int, int]]:
+    segs = []
+    i = 0
+    n = len(x)
+    while i < n:
+        if x[i] == 1:
+            j = i
+            while j+1 < n and x[j+1] == 1:
+                j += 1
+            segs.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+    return segs
+
+def event_level_pr(gt: np.ndarray, pred: np.ndarray) -> Tuple[float, float]:
+    gt_events = segments_from_binary(gt)
+    pr_events = segments_from_binary(pred)
+    if len(pr_events) == 0:
+        return 0.0, 0.0
+    # A predicted event is TP if it overlaps any GT event
+    TP = sum(any(not (p1 > g2 or p2 < g1) for (g1, g2) in gt_events) for (p1, p2) in pr_events)
+    FP = len(pr_events) - TP
+    FN = len(gt_events) - TP
+    prec = TP / (TP + FP) if (TP + FP) else 0.0
+    rec  = TP / (TP + FN) if (TP + FN) else 0.0
+    return prec, rec
+
 #region Model Training & Evaluation
 def train_and_eval_lstm(
     data_dir: Path,
@@ -398,7 +491,7 @@ def train_and_eval_lstm(
         if len(train_ds)==0 or len(val_ds)==0 or len(test_ds)==0:
             raise RuntimeError("Empty split in forecast mode. Check window/lags or data coverage.")
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False,  num_workers=0)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
         val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
 
@@ -416,35 +509,47 @@ def train_and_eval_lstm(
         ).to(DEVICE)
 
         optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        # criterion = nn.MSELoss()
-        criterion = nn.SmoothL1Loss(beta=1.0)  # Huber; beta is the transition point
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optim, mode="min", factor=0.5, patience=2, min_lr=1e-5
+        )
 
+        train_loss_hist, val_rmse_hist, val_mae_hist = [], [], []
 
-        # 7) Train with early stopping on Val RMSE
+        criterion = nn.MSELoss()
+
         best_rmse, patience = np.inf, 0
+
         for ep in range(1, max_epochs + 1):
+            # ---- Train ----
             model.train()
             train_losses = []
             for xb, yb in train_loader:
                 xb = xb.to(DEVICE, dtype=torch.float32)
                 yb = yb.to(DEVICE, dtype=torch.float32)
-                pred, _ = model(xb)                # pred: [B]
-                loss = criterion(pred, yb)         # yb:   [B]
-                optim.zero_grad(); loss.backward(); optim.step()
+                pred, _ = model(xb)
+                loss = criterion(pred, yb)
+                optim.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); optim.step()
                 train_losses.append(loss.item())
             avg_loss = np.mean(train_losses)
 
-            # Validation: compute MAE & RMSE in *scaled* space (consistent during training)
+            # ---- Validation ----
             model.eval()
             with torch.no_grad():
                 pv, tv = [], []
                 for xb, yb in val_loader:
-                    p_batch, _ = model(xb.to(DEVICE, dtype=torch.float32))
-                    pv.append(p_batch.cpu().numpy())
-                    tv.append(yb.numpy())
+                    pred, _ = model(xb.to(DEVICE, dtype=torch.float32))
+                    pv.append(pred.cpu().numpy()); tv.append(yb.numpy())
                 pv = np.concatenate(pv); tv = np.concatenate(tv)
-                mae = mean_absolute_error(tv, pv)
+
+                mae  = mean_absolute_error(tv, pv)
                 rmse = float(np.sqrt(mean_squared_error(tv, pv)))
+
+            scheduler.step(rmse)
+
+            # save histories
+            train_loss_hist.append(avg_loss)
+            val_rmse_hist.append(rmse)
+            val_mae_hist.append(mae)
 
             print(f"[Epoch {ep:02d}] Train Loss={avg_loss:.4f} | Val MAE={mae:.4f} RMSE={rmse:.4f}")
             if rmse + 1e-8 < best_rmse:
@@ -456,6 +561,17 @@ def train_and_eval_lstm(
                 patience += 1
                 if patience >= early_patience:
                     print("[INFO] Early stopping."); break
+
+        # --- Plot losses after training ---
+        plt.figure(figsize=(8,5))
+        plt.plot(train_loss_hist, label="Train Loss (MSE)")
+        plt.plot(val_rmse_hist, label="Validation RMSE")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss / RMSE")
+        plt.title("Training vs Validation Loss")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()
         
         # Residual-based leak detection
         # 1) Compute residuals on TRAIN (scaled) to set a threshold at a percentile.

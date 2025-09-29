@@ -78,17 +78,17 @@ MLP_DEFAULTS = dict(
 # LSTM
 @dataclass(frozen=True)
 class LSTMDefaults:
-    window: int = 2*24
+    window: int = 3*24
     stride: int = 1
     hidden: int = 64
     num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 40
-    dropout: float = 0.25
+    max_epochs: int = 20
+    dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5
-    early_patience: int = 8
+    early_patience: int = 10
 
 LSTM_DEFAULTS = LSTMDefaults()
 
