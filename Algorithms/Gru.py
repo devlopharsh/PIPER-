@@ -52,6 +52,41 @@ class GRUHead(nn.Module):
         out = self.fc(out)          # [B, T, 1]
         return out.squeeze(-1)      # [B, T]
 
+
+class GRURegressor(nn.Module):
+    """
+    Many-to-one GRU forecaster:
+      input  x: [B, T, F]
+      output y: [B]   (one scalar per sample)
+    """
+    def __init__(self, in_dim: int, hidden: int = 64, num_layers: int = 1,
+                 bidirectional: bool = False, dropout: float = 0.2):
+        super().__init__()
+        self.bidirectional = bidirectional
+        self.num_layers = num_layers
+        self.hidden = hidden
+        self.gru = nn.GRU(
+            input_size=in_dim,
+            hidden_size=hidden,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=bidirectional,
+            dropout=0.0 if num_layers == 1 else dropout
+        )
+        out_dim = hidden * (2 if bidirectional else 1)
+        self.fc = nn.Linear(out_dim, 1)
+
+    def forward(self, x):  # x: [B, T, F]
+        out, h = self.gru(x)  # h: [num_layers*dirs, B, H]
+        # take the last layer's hidden; if bidirectional, concat directions
+        if self.bidirectional:
+            h_last = torch.cat([h[-2], h[-1]], dim=1)  # [B, 2H]
+        else:
+            h_last = h[-1]                              # [B, H]
+        y = self.fc(h_last).squeeze(-1)                # [B]
+        return y
+
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class SeqDatasetCls(torch.utils.data.Dataset):
@@ -79,13 +114,28 @@ class SeqDatasetCls(torch.utils.data.Dataset):
     def __getitem__(self, i):
         return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
 
+
 class LagSeqDatasetForecast(torch.utils.data.Dataset):
-    def __init__(self, df, lag_cols):
-        X = df[lag_cols].to_numpy(dtype=np.float32)
-        self.X = torch.from_numpy(X.reshape(len(df), len(lag_cols), 1))
+    """
+    X: [N, T, F]
+      - lag features across time
+      - static features (roll means/stds, Hour, DayOfWeek, Month) broadcast across T
+    y: [N] (scalar per sample)
+    """
+    def __init__(self, df, lag_cols, static_cols=None):
+        L = len(lag_cols)
+        Xlag = df[lag_cols].to_numpy(dtype=np.float32).reshape(len(df), L, 1)  # [N, T, 1]
+        if static_cols:
+            Xstat = df[static_cols].to_numpy(dtype=np.float32)                 # [N, S]
+            Xstat_rep = np.repeat(Xstat[:, None, :], L, axis=1)                # [N, T, S]
+            X = np.concatenate([Xlag, Xstat_rep], axis=2)                      # [N, T, 1+S]
+        else:
+            X = Xlag
+        self.X = torch.from_numpy(X)
         self.y = torch.from_numpy(df[FORECAST_Y_COL].to_numpy(dtype=np.float32))
     def __len__(self): return len(self.y)
     def __getitem__(self, i): return self.X[i], self.y[i]
+
 
 
 def train_and_eval_gru(
@@ -235,16 +285,21 @@ def train_and_eval_gru(
             lags=window, target_col=DELTA_VOLUME_COL,
         )
 
-        # 2) Time-based per-meter split
         train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
         train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
 
-        LAG_COLS = [f"lag_{k}" for k in range(window, 0, -1)]
+        # Keep *only* lag columns as sequence features
+        LAG_COLS    = [f"lag_{k}" for k in range(window, 0, -1)]
+        STATIC_COLS = [c for c in train_df.columns if c.startswith("roll") or c in ("Hour","DayOfWeek","Month")]
 
-        # 3) Scale X on TRAIN-CORE only
-        tr_scaled, _dummy, scaler_X = scale_on_train(train_core_df, train_core_df, LAG_COLS)
-        val_scaled = val_df.copy();   val_scaled[LAG_COLS]  = scaler_X.transform(val_scaled[LAG_COLS])
-        test_scaled = test_df.copy(); test_scaled[LAG_COLS] = scaler_X.transform(test_scaled[LAG_COLS])
+        # 3) SCALE features on TRAIN-CORE ONLY (avoid leakage)
+        ALL_INPUT_COLS = LAG_COLS + STATIC_COLS
+
+        tr_scaled, _dummy, scaler_X = scale_on_train(train_core_df, train_core_df, ALL_INPUT_COLS)
+        val_scaled = val_df.copy()
+        val_scaled[ALL_INPUT_COLS] = scaler_X.transform(val_scaled[ALL_INPUT_COLS])
+        test_scaled = test_df.copy()
+        test_scaled[ALL_INPUT_COLS] = scaler_X.transform(test_scaled[ALL_INPUT_COLS])
 
         # Scale y for stability
         from sklearn.preprocessing import StandardScaler
@@ -256,19 +311,29 @@ def train_and_eval_gru(
         test_scaled[FORECAST_Y_COL]= y_scaler.transform(test_scaled[[FORECAST_Y_COL]])
 
         # 4) Datasets
-        train_ds = LagSeqDatasetForecast(tr_scaled, LAG_COLS)
-        val_ds   = LagSeqDatasetForecast(val_scaled, LAG_COLS)
-        test_ds  = LagSeqDatasetForecast(test_scaled, LAG_COLS)
+        train_ds = LagSeqDatasetForecast(tr_scaled,  LAG_COLS, static_cols=STATIC_COLS)
+        val_ds   = LagSeqDatasetForecast(val_scaled, LAG_COLS, static_cols=STATIC_COLS)
+        test_ds  = LagSeqDatasetForecast(test_scaled,LAG_COLS, static_cols=STATIC_COLS)
         if len(train_ds)==0 or len(val_ds)==0 or len(test_ds)==0:
             raise RuntimeError("Empty split in forecast mode. Check window/lags or data coverage.")
 
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
         val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
         test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
 
         # 5) Model + MSE
-        model = GRUHead(in_dim=1, hidden=hidden, num_layers=num_layers,
-                        bidirectional=bidirectional, dropout=dropout).to(DEVICE)
+        # infer input dimension F from a real batch
+        xb, yb = next(iter(train_loader))
+        in_dim = xb.shape[-1]
+
+        model = GRURegressor(
+            in_dim=in_dim,
+            hidden=hidden,
+            num_layers=num_layers,
+            bidirectional=bidirectional,
+            dropout=dropout
+        ).to(DEVICE)
+
         optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         criterion = nn.MSELoss()
 
@@ -277,11 +342,13 @@ def train_and_eval_gru(
             model.train()
             tloss = []
             for xb, yb in train_loader:
-                xb = xb.to(DEVICE, dtype=torch.float32)
-                yb = yb.to(DEVICE, dtype=torch.float32)
-                pred = model(xb)
+                xb = xb.to(DEVICE, dtype=torch.float32)           # [B, T, F]
+                yb = yb.to(DEVICE, dtype=torch.float32).view(-1)  # [B]
+                pred = model(xb)                                   # [B]
                 loss = criterion(pred, yb)
-                optim.zero_grad(); loss.backward(); optim.step()
+                optim.zero_grad(); loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optim.step()
                 tloss.append(loss.item())
 
             # Validate in scaled space (consistent)
@@ -307,6 +374,17 @@ def train_and_eval_gru(
                 patience += 1
                 if patience >= early_patience:
                     print("[INFO] Early stopping."); break
+        
+        model.load_state_dict(torch.load(MODELS_DIR / "gru_forecast.pt", map_location=DEVICE))
+        model.eval()
+        with torch.no_grad():
+            pt, tt = [], []
+            for xb, yb in train_loader:
+                pt.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
+                tt.append(yb.numpy())
+            yhat_tr_sc = np.concatenate(pt); y_tr_sc = np.concatenate(tt)
+        res_tr = np.abs(y_tr_sc - yhat_tr_sc)
+        thr = float(np.percentile(res_tr, residual_threshold_pct))
 
         # 6) Test in ORIGINAL units
         model.load_state_dict(torch.load(MODELS_DIR / "gru_forecast.pt", map_location=DEVICE))
@@ -324,17 +402,7 @@ def train_and_eval_gru(
 
         mae  = float(mean_absolute_error(y_test, yhat_te))
         rmse = float(np.sqrt(mean_squared_error(y_test, yhat_te)))
-
-        # Residual-based detection with TRAIN threshold (scaled space)
-        with torch.no_grad():
-            pt, tt = [], []
-            for xb, yb in train_loader:
-                pt.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-                tt.append(yb.numpy())
-            yhat_tr_sc = np.concatenate(pt); y_tr_sc = np.concatenate(tt)
-        res_tr = np.abs(y_tr_sc - yhat_tr_sc)
-        thr = float(np.percentile(res_tr, residual_threshold_pct))
-
+        
         res_te = np.abs(y_test_sc - yhat_te_sc)
         pred_leak = (res_te >= thr).astype(int)
 
@@ -382,7 +450,7 @@ if __name__ == "__main__":
     ap.add_argument("--min_len_frac", type=float, default=0.05)
 
     # --- forecasting knobs ---
-    ap.add_argument("--residual_threshold_pct", type=float, default=RESIDUAL_THRESHOLD_PCT_DEFAULT)
+    ap.add_argument("--residual_threshold_pct", type=float, default=85)
 
     args = ap.parse_args()
 

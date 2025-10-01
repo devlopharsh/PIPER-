@@ -5,7 +5,6 @@ import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
 try:
-    from dotenv import load_dotenv
     load_dotenv()
 except Exception:
     pass
@@ -58,7 +57,6 @@ TAIL_FRACTION_DEFAULT        = 0.30
 # Forecasting defaults
 LAGS_DEFAULT                 = 24
 ROLLING_WINDOWS_DEFAULT      = (6, 24)
-DROP_CALENDAR_DEFAULT        = False
 RESIDUAL_THRESHOLD_PCT_DEFAULT = 85
 
 # --------------------
@@ -67,12 +65,12 @@ RESIDUAL_THRESHOLD_PCT_DEFAULT = 85
 # MLP
 MLP_DEFAULTS = dict(
     hidden=[128, 64],
-    dropout=0.1,
+    dropout=0.2,
     batch_size=256,
     lr=1e-3,
     weight_decay=1e-5,
-    max_epochs=30,
-    early_patience=8,
+    max_epochs=20,
+    early_patience=10,
 )
 
 # LSTM
@@ -95,17 +93,17 @@ LSTM_DEFAULTS = LSTMDefaults()
 # GRU 
 @dataclass(frozen=True)
 class GRUDefaults:
-    window: int = 48
+    window: int = 3*24
     stride: int = 1
     hidden: int = 64
-    num_layers: int = 1
+    num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 60
+    max_epochs: int = 15
     dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5
-    early_patience: int = 8
+    early_patience: int = 10
 
 GRU_DEFAULTS = GRUDefaults()
 

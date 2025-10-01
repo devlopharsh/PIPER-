@@ -101,12 +101,11 @@ def train_and_eval_mlp(
     rolling_windows: Tuple[int, ...] = (6, 24),
     residual_threshold_pct: float = RESIDUAL_THRESHOLD_PCT_DEFAULT,
 ):
-    import pandas as pd  # local to keep import order tidy
-
     set_seed(seed)
 
-    # ------------------------- 1) Build dataset -------------------------
+    # ------------------------- BUILD DATA -------------------------
     if task == "cls":
+        # Build classification frame with synthetic persistent leaks
         df = build_aggregated_dataset(
             data_dir=data_dir,
             use_forecast=False,
@@ -115,50 +114,51 @@ def train_and_eval_mlp(
             n_segments_range=(n_segments_min, n_segments_max),
             min_len_frac=min_len_frac,
         )
-    else:
-        df = build_aggregated_dataset(
-            data_dir=data_dir,
-            use_forecast=True,
-            target_col=target_col,
-            lags=lags,
-            rolling_windows=rolling_windows,
-            forecast_include_labels=True,     # keep Leak_Flag for train filtering & test detection
-        )
 
-    # ------------------------- 2) Time-based split -------------------------
-    train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
+        # Time split per meter → train/test; then train_core/val
+        train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
+        train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
 
-    # Small validation from TRAIN (last 10% per meter)
-    train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
+        # Feature set (classification)
+        feat_cols = [c for c in CLS_FEATURE_COLS if c in train_core_df.columns and c != FORECAST_Y_COL]
 
-    # ------------------------- 3) Scale on TRAIN-CORE only -------------------------
-    feat_cols = list(CLS_FEATURE_COLS)
-    tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feat_cols)
-    val_scaled = val_df.copy();  val_scaled[feat_cols]  = scaler.transform(val_scaled[feat_cols])
-    te_scaled  = test_df.copy(); te_scaled[feat_cols]   = scaler.transform(te_scaled[feat_cols])
+        # Scale X on TRAIN-CORE only
+        tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feat_cols)
+        val_scaled = val_df.copy();  val_scaled[feat_cols] = scaler.transform(val_scaled[feat_cols])
+        te_scaled  = test_df.copy(); te_scaled[feat_cols]  = scaler.transform(te_scaled[feat_cols])
 
-    # ------------------------- 4) DataLoaders -------------------------
-    Xtr, ytr = to_xy(tr_core_scaled, feat_cols, task)
-    Xva, yva = to_xy(val_scaled,     feat_cols, task)
-    Xte, yte = to_xy(te_scaled,      feat_cols, task)
+        # Lock to common columns (defensive)
+        common_cols = [c for c in feat_cols
+                       if c in tr_core_scaled.columns
+                       and c in val_scaled.columns
+                       and c in te_scaled.columns]
+        feat_cols = common_cols
 
-    train_loader = DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)), batch_size=batch_size, shuffle=True,  num_workers=0)
-    val_loader   = DataLoader(TensorDataset(torch.from_numpy(Xva), torch.from_numpy(yva)), batch_size=batch_size, shuffle=False, num_workers=0)
-    test_loader  = DataLoader(TensorDataset(torch.from_numpy(Xte), torch.from_numpy(yte)), batch_size=batch_size, shuffle=False, num_workers=0)
+        # Dataloaders
+        Xtr, ytr = to_xy(tr_core_scaled, feat_cols, task="cls")
+        Xva, yva = to_xy(val_scaled,     feat_cols, task="cls")
+        Xte, yte = to_xy(te_scaled,      feat_cols, task="cls")
 
-    # ------------------------- 5) Model / Loss / Optim -------------------------
-    model = MLP(in_dim=len(feat_cols), hidden=list(hidden), p_drop=dropout).to(DEVICE)
-    optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        train_loader = DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)),
+                                  batch_size=batch_size, shuffle=True,  num_workers=0)
+        val_loader   = DataLoader(TensorDataset(torch.from_numpy(Xva), torch.from_numpy(yva)),
+                                  batch_size=batch_size, shuffle=False, num_workers=0)
+        test_loader  = DataLoader(TensorDataset(torch.from_numpy(Xte), torch.from_numpy(yte)),
+                                  batch_size=batch_size, shuffle=False, num_workers=0)
 
-    if task == "cls":
-        # class imbalance weight from TRAIN only
+        # Infer input dim from batch
+        xb0, _ = next(iter(train_loader))
+        in_dim = xb0.shape[1]
+        model = MLP(in_dim=in_dim, hidden=list(hidden), p_drop=dropout).to(DEVICE)
+
+        # Loss/optim (class imbalance)
         pos = float(ytr.sum())
         pos_weight = (len(ytr) - pos) / (pos + 1e-6)
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], dtype=torch.float32, device=DEVICE))
+        optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-        best_metric = -1.0
-        patience = 0
-
+        # Train + early stop on Val F1 (via stable threshold)
+        best_metric = -1.0; patience = 0
         for ep in range(1, max_epochs + 1):
             model.train()
             for xb, yb in train_loader:
@@ -166,7 +166,7 @@ def train_and_eval_mlp(
                 loss = criterion(model(xb), yb)
                 optim.zero_grad(); loss.backward(); optim.step()
 
-            # ---- validation F1 ----
+            # Validate
             model.eval()
             with torch.no_grad():
                 logits, ys = [], []
@@ -176,8 +176,7 @@ def train_and_eval_mlp(
                     ys.append(yb.numpy())
             y_scores = np.concatenate(logits).ravel()
             y_true   = np.concatenate(ys).ravel()
-
-            y_probs = expit(np.clip(y_scores, -20, 20))
+            y_probs  = expit(np.clip(y_scores, -20, 20))
 
             beta = 1
             stable_thr, thr_list = find_stable_threshold(y_true, y_probs, beta=beta, n_splits=5)
@@ -187,9 +186,8 @@ def train_and_eval_mlp(
             val_ap    = average_precision_score(y_true, y_probs)
             print(f"[Epoch {ep:02d}] Val AP={val_ap:.4f} | Val F{beta}={val_fbeta:.4f} @thr={stable_thr:.3f}")
 
-            metric = val_fbeta
-            if metric > best_metric + 1e-4:
-                best_metric = metric; patience = 0
+            if val_fbeta > best_metric + 1e-4:
+                best_metric = val_fbeta; patience = 0
                 MODELS_DIR.mkdir(parents=True, exist_ok=True)
                 torch.save(model.state_dict(), MODELS_DIR / "mlp_cls.pt")
                 joblib.dump(scaler, MODELS_DIR / "mlp_cls_scaler.joblib")
@@ -198,10 +196,9 @@ def train_and_eval_mlp(
             else:
                 patience += 1
                 if patience >= early_patience:
-                    print("[INFO] Early stopping.")
-                    break
+                    print("[INFO] Early stopping."); break
 
-        # ---- Final test ----
+        # ---- Test ----
         model.load_state_dict(torch.load(MODELS_DIR / "mlp_cls.pt", map_location=DEVICE))
         with open(MODELS_DIR / "mlp_cls_best_thr.txt") as f:
             best_thr = float(f.read().strip())
@@ -217,7 +214,6 @@ def train_and_eval_mlp(
         y_true   = np.concatenate(ys).ravel()
         y_probs  = expit(np.clip(y_scores, -20, 20))
         y_pred   = (y_probs >= best_thr).astype(int)
-        print(f"[INFO] CV thresholds={thr_list}, using stable_thr={best_thr:.3f}")
 
         acc  = float(accuracy_score(y_true, y_pred))
         f1b  = float(f1_score(y_true, y_pred, average="binary"))
@@ -233,9 +229,9 @@ def train_and_eval_mlp(
             "accuracy": acc,
             "precision": prec,
             "recall": rec,
-            "f1_binary": f1b,     # <- rename so it’s not mislabeled
+            "f1_binary": f1b,
             "f2_binary": f2,
-            "ap": ap,             # PR-AUC
+            "ap": ap,
             "cm": cm,
             "report": report,
             "thr": best_thr,
@@ -243,94 +239,158 @@ def train_and_eval_mlp(
             "scaler_path": str(MODELS_DIR / "mlp_cls_scaler.joblib"),
         }
 
-    # ---------------------- Forecast (regression) ----------------------
-    criterion = nn.MSELoss()
-    best_metric = np.inf
-    patience = 0
+    # ------------------------- FORECAST -------------------------
+    else:
+        # Build forecasting frame (with labels kept for detection)
+        df = build_aggregated_dataset(
+            data_dir=data_dir,
+            use_forecast=True,
+            target_col=target_col,
+            lags=lags,
+            rolling_windows=rolling_windows,
+            forecast_include_labels=True,
+        )
 
-    for ep in range(1, max_epochs + 1):
-        model.train()
-        for xb, yb in train_loader:
-            xb = xb.to(DEVICE); yb = yb.to(DEVICE)
-            pred = model(xb)
-            loss = criterion(pred, yb)
-            optim.zero_grad(); loss.backward(); optim.step()
+        # Time split per meter
+        train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
+        train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
 
-        # ---- validation MAE ----
+        # Feature set (forecast): lags + rolling + calendar
+        lag_cols  = [c for c in df.columns if c.startswith("lag_")]
+        roll_cols = [c for c in df.columns if c.startswith("roll")]
+        cal_cols  = [c for c in CALENDAR_COLS if c in df.columns]
+        feat_cols = [c for c in (lag_cols + roll_cols + cal_cols) if c != FORECAST_Y_COL]
+
+        # Scale X on TRAIN-CORE only
+        tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feat_cols)
+        val_scaled = val_df.copy();  val_scaled[feat_cols] = scaler.transform(val_scaled[feat_cols])
+        te_scaled  = test_df.copy(); te_scaled[feat_cols]  = scaler.transform(te_scaled[feat_cols])
+
+        # y-scaling (recommended)
+        from sklearn.preprocessing import StandardScaler
+        y_scaler = StandardScaler()
+        tr_core_scaled[FORECAST_Y_COL] = y_scaler.fit_transform(tr_core_scaled[[FORECAST_Y_COL]])
+        val_scaled[FORECAST_Y_COL]     = y_scaler.transform(val_scaled[[FORECAST_Y_COL]])
+        te_scaled[FORECAST_Y_COL]      = y_scaler.transform(te_scaled[[FORECAST_Y_COL]])
+
+        # Lock to common feature columns
+        common_cols = [c for c in feat_cols
+                       if c in tr_core_scaled.columns
+                       and c in val_scaled.columns
+                       and c in te_scaled.columns]
+        feat_cols = common_cols
+
+        # Dataloaders
+        Xtr, ytr = to_xy(tr_core_scaled, feat_cols, task="forecast")
+        Xva, yva = to_xy(val_scaled,     feat_cols, task="forecast")
+        Xte, yte = to_xy(te_scaled,      feat_cols, task="forecast")
+
+        train_loader = DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)),
+                                  batch_size=batch_size, shuffle=True,  num_workers=0)
+        val_loader   = DataLoader(TensorDataset(torch.from_numpy(Xva), torch.from_numpy(yva)),
+                                  batch_size=batch_size, shuffle=False, num_workers=0)
+        test_loader  = DataLoader(TensorDataset(torch.from_numpy(Xte), torch.from_numpy(yte)),
+                                  batch_size=batch_size, shuffle=False, num_workers=0)
+
+        # Infer input dim from batch
+        xb0, _ = next(iter(train_loader))
+        in_dim = xb0.shape[1]
+        model = MLP(in_dim=in_dim, hidden=list(hidden), p_drop=dropout).to(DEVICE)
+
+        # Optim / loss
+        optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        criterion = nn.MSELoss()
+
+        # Train + early stop on Val MAE
+        best_metric = np.inf; patience = 0
+        for ep in range(1, max_epochs + 1):
+            model.train()
+            for xb, yb in train_loader:
+                xb = xb.to(DEVICE); yb = yb.to(DEVICE)
+                pred = model(xb)
+                loss = criterion(pred, yb)
+                optim.zero_grad(); loss.backward(); optim.step()
+
+            model.eval()
+            with torch.no_grad():
+                preds, ys = [], []
+                for xb, yb in val_loader:
+                    xb = xb.to(DEVICE)
+                    preds.append(model(xb).cpu().numpy())
+                    ys.append(yb.numpy())
+                yhat = np.concatenate(preds); yval = np.concatenate(ys)
+                val_mae = mean_absolute_error(yval, yhat)
+
+            print(f"[Epoch {ep:02d}] Val MAE={val_mae:.4f}")
+            if val_mae + 1e-6 < best_metric:
+                best_metric = val_mae; patience = 0
+                MODELS_DIR.mkdir(parents=True, exist_ok=True)
+                torch.save(model.state_dict(), MODELS_DIR / "mlp_forecast.pt")
+                joblib.dump(scaler,   MODELS_DIR / "mlp_forecast_x_scaler.joblib")
+                joblib.dump(y_scaler, MODELS_DIR / "mlp_forecast_y_scaler.joblib")
+            else:
+                patience += 1
+                if patience >= early_patience:
+                    print("[INFO] Early stopping."); break
+
+        # ---- Final test ----
+        model.load_state_dict(torch.load(MODELS_DIR / "mlp_forecast.pt", map_location=DEVICE))
         model.eval()
-        with torch.no_grad():
-            preds, ys = [], []
-            for xb, yb in val_loader:
-                xb = xb.to(DEVICE)
-                preds.append(model(xb).cpu().numpy())
-                ys.append(yb.numpy())
-            yhat = np.concatenate(preds)
-            yval = np.concatenate(ys)
-            val_mae = mean_absolute_error(yval, yhat)
 
-        print(f"[Epoch {ep:02d}] Val MAE={val_mae:.4f}")
-        if val_mae + 1e-6 < best_metric:
-            best_metric = val_mae; patience = 0
-            MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            torch.save(model.state_dict(), MODELS_DIR / "mlp_forecast.pt")
-            joblib.dump(scaler, MODELS_DIR / "mlp_forecast_scaler.joblib")
-        else:
-            patience += 1
-            if patience >= early_patience:
-                print("[INFO] Early stopping.")
-                break
+        def batched_predict(X_np, bs):
+            preds = []
+            with torch.no_grad():
+                for i in range(0, len(X_np), bs):
+                    xb = torch.from_numpy(X_np[i:i+bs]).to(DEVICE)
+                    preds.append(model(xb).cpu().numpy())
+            return np.concatenate(preds)
 
-    # ---- Final test ----
-    model.load_state_dict(torch.load(MODELS_DIR / "mlp_forecast.pt", map_location=DEVICE))
-    model.eval()
-    with torch.no_grad():
-        preds_tr, ys_tr = [], []
-        for xb, yb in DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)), batch_size=batch_size, shuffle=False):
-            xb = xb.to(DEVICE)
-            preds_tr.append(model(xb).cpu().numpy()); ys_tr.append(yb.numpy())
-        yhat_tr = np.concatenate(preds_tr); ytr_all = np.concatenate(ys_tr)
+        # Arrays (scaled)
+        yhat_tr_sc = batched_predict(Xtr, batch_size)
+        yhat_te_sc = batched_predict(Xte, batch_size)
 
-        preds_te, ys_te = [], []
-        for xb, yb in test_loader:
-            xb = xb.to(DEVICE)
-            preds_te.append(model(xb).cpu().numpy()); ys_te.append(yb.numpy())
-        yhat_te = np.concatenate(preds_te); yte_all = np.concatenate(ys_te)
+        # Human-readable metrics in original units
+        y_te    = y_scaler.inverse_transform(yte.reshape(-1,1)).ravel()
+        yhat_te = y_scaler.inverse_transform(yhat_te_sc.reshape(-1,1)).ravel()
+        mae  = float(mean_absolute_error(y_te, yhat_te))
+        rmse = float(np.sqrt(mean_squared_error(y_te, yhat_te)))
 
-    mae  = float(mean_absolute_error(yte_all, yhat_te))
-    rmse = float(np.sqrt(mean_squared_error(yte_all, yhat_te)))
+        # Residual threshold from TRAIN (scaled space)
+        res_tr_sc = np.abs(ytr - yhat_tr_sc)
+        thr = float(np.percentile(res_tr_sc, residual_threshold_pct))
 
-    # Residual threshold from TRAIN
-    res_tr = np.abs(ytr_all - yhat_tr)
-    thr = float(np.percentile(res_tr, residual_threshold_pct))
+        # TEST detection (scaled space)
+        res_te_sc = np.abs(yte - yhat_te_sc)
+        pred_leak = (res_te_sc >= thr).astype(int)
 
-    out = {
-        "task": "forecast",
-        "mae": mae,
-        "rmse": rmse,
-        "train_residual_threshold": thr,
-        "model_path": str(MODELS_DIR / "mlp_forecast.pt"),
-        "scaler_path": str(MODELS_DIR / "mlp_forecast_scaler.joblib"),
-    }
+        out = {
+            "task": "forecast",
+            "mae": mae,
+            "rmse": rmse,
+            "train_residual_threshold": thr,
+            "model_path": str(MODELS_DIR / "mlp_forecast.pt"),
+            "x_scaler_path": str(MODELS_DIR / "mlp_forecast_x_scaler.joblib"),
+            "y_scaler_path": str(MODELS_DIR / "mlp_forecast_y_scaler.joblib"),
+        }
 
-    # Optional residual-based leak detection if labels exist in TEST
-    if LEAK_FLAG_COL in te_scaled.columns:
-        res_te = np.abs(yte_all - yhat_te)
-        pred_leak = (res_te >= thr).astype(int)
-        gt = te_scaled[LEAK_FLAG_COL].to_numpy()
-        out.update({
-            "det_acc": float(accuracy_score(gt, pred_leak)),
-            "det_prec": float(precision_score(gt, pred_leak, zero_division=0)),
-            "det_rec": float(recall_score(gt, pred_leak, zero_division=0)),
-            "det_f1": float(f1_score(gt, pred_leak, zero_division=0)),
-            "det_cm": confusion_matrix(gt, pred_leak).tolist(),
-        })
+        # Optional detection metrics if labels exist
+        if LEAK_FLAG_COL in te_scaled.columns:
+            gt = te_scaled[LEAK_FLAG_COL].to_numpy()
+            out.update({
+                "det_acc": float(accuracy_score(gt, pred_leak)),
+                "det_prec": float(precision_score(gt, pred_leak, zero_division=0)),
+                "det_rec": float(recall_score(gt, pred_leak, zero_division=0)),
+                "det_f1": float(f1_score(gt, pred_leak, zero_division=0)),
+                "det_cm": confusion_matrix(gt, pred_leak).tolist(),
+            })
 
-    # Persist threshold
-    thr_path = MODELS_DIR / "mlp_forecast_residual_threshold.txt"
-    with open(thr_path, "w") as f:
-        f.write(str(thr))
-    out["threshold_path"] = str(thr_path)
-    return out
+        # Persist threshold
+        thr_path = MODELS_DIR / "mlp_forecast_residual_threshold.txt"
+        with open(thr_path, "w") as f:
+            f.write(str(thr))
+        out["threshold_path"] = str(thr_path)
+        return out
+
 
 
 # ----------------------------- CLI -----------------------------
@@ -355,12 +415,12 @@ if __name__ == "__main__":
     parser.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
 
     # Classification builder knobs
-    parser.add_argument("--n_segments_min", type=int, default=1)
-    parser.add_argument("--n_segments_max", type=int, default=3)
+    parser.add_argument("--n_segments_min", type=int, default=2)
+    parser.add_argument("--n_segments_max", type=int, default=5)
     parser.add_argument("--min_len_frac", type=float, default=0.05)
 
     # Forecasting builder knobs
-    parser.add_argument("--target_col", type=str, default=DELTA_VOLUME_COL, choices=[VOLUME_READING_COL, DELTA_VOLUME_COL])
+    parser.add_argument("--target_col", type=str, default=DELTA_VOLUME_COL, choices=[ DELTA_VOLUME_COL])
     parser.add_argument("--lags", type=int, default=3*24)
     parser.add_argument("--rolling_windows", type=str, default="6,24")
     parser.add_argument("--residual_threshold_pct", type=float, default=RESIDUAL_THRESHOLD_PCT_DEFAULT)
