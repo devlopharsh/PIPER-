@@ -1,21 +1,15 @@
 
 """Project constants. Override via env or CLI where possible."""
-from pathlib import Path
-import os
-from dotenv import load_dotenv
 from dataclasses import dataclass
-try:
-    load_dotenv()
-except Exception:
-    pass
-
+import torch
+from pathlib import Path
 
 # Root data folder
-DATA_DIR = Path(os.getenv("LEAK_DATA_DIR", "./LeakageData")).resolve()
-
+DATA_DIR = Path("./LeakageData")
 # Model output directory
-MODELS_DIR = Path(os.getenv("LEAK_MODELS_DIR", "./models")).resolve()
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+MODELS_DIR = Path("./models")
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # --------------------
@@ -32,16 +26,13 @@ FORECAST_Y_COL    = "y"             # target used by forecasting builders
 # Calendar feature set
 CALENDAR_COLS = ["Hour", "DayOfWeek", "Month"]
 ROLLING_COLS = [
-    "roll6_mean", "roll24_mean", "roll168_mean", "roll720_mean",
-    "roll6_std",  "roll24_std",  "roll168_std",  "roll720_std",
-    # "rel_to_roll24"  # optional
+    "roll6_mean", "roll24_mean", "roll6_std",  "roll24_std",
+    "rel_to_roll24"  # optional
 ]
-
 
 # Baseline CLS features (used by tabular cls models)
 CLS_FEATURE_COLS = [*CALENDAR_COLS, *ROLLING_COLS, DELTA_VOLUME_COL]
 
-FORECAST_COLS = [*CALENDAR_COLS, *ROLLING_COLS,]
 # --------------------
 # Default data knobs (shared)
 # --------------------
@@ -52,12 +43,6 @@ VAL_FRACTION_DEFAULT         = 0.10
 LEAK_FRACTION_DEFAULT        = 0.15
 SEGMENTS_RANGE_DEFAULT       = (1, 3)
 MIN_LEN_FRAC_DEFAULT         = 0.05
-TAIL_FRACTION_DEFAULT        = 0.30
-
-# Forecasting defaults
-LAGS_DEFAULT                 = 24
-ROLLING_WINDOWS_DEFAULT      = (6, 24)
-RESIDUAL_THRESHOLD_PCT_DEFAULT = 85
 
 # --------------------
 # Model-specific sane defaults

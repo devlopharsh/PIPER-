@@ -4,7 +4,7 @@ The project focuses on detecting water leakages in supply networks using **senso
 Two main tasks are addressed:
 
 1. **Leak Classification** – detect whether a leak exists at a given time.  
-2. **Volume Forecasting** – predict future water consumption volumes to anticipate anomalies.  
+2. **Volume Forecasting** – predict future water consumption volumes in cases where data is absent.  
 
 
 ## Repository Structure
@@ -19,7 +19,6 @@ Two main tasks are addressed:
 - **Time Series Forecasting**: LSTM, GRU, baseline regressors.  
 - **Evaluation Metrics**:  
   - Classification: Accuracy, Precision, Recall, F1, Confusion Matrix.  
-  - Forecasting: MAE, RMSE.  
 - **Deployment-ready**: Models can be exported for **AWS SageMaker** or **Kubernetes**.  
 
 ## Getting Started
@@ -36,20 +35,9 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Create and Setup .env
-- Include the following paths inside the .env file
-```bash
-LEAK_DATA_DIR = "./LeakageData"
-LEAK_MODELS_DIR = "./models"
-```
-
-### 4. Run ML Algorithms
+### 3. Run ML Algorithms
 #### Classifier
 ```bash
 python -m Algorithms.Lstm
 python -m Algorithms.Gru
-```
-#### Forecaster
-```bash
-python -m Algorithms.Lstm --task forecast
 ```

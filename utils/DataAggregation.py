@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from utils.constants import (
     METER_ID_COL, TIMESTAMP_COL,
     VOLUME_COL, VOLUME_READING_COL, DELTA_VOLUME_COL,
-    LEAK_FLAG_COL, FORECAST_Y_COL,
+    LEAK_FLAG_COL,
     CALENDAR_COLS,
 )
 
@@ -106,7 +106,6 @@ def inject_random_leak_segments(
     n_segments_range: Tuple[int, int] = (1, 3),
     min_len_frac: float = 0.05,
     seed: int = 42,
-    placement: Literal["random", "tail"] = "random",
     test_fraction: float = 0.30,
     ensure_test_leak_abs_share: float = 0.0,
 ) -> pd.DataFrame:
@@ -136,23 +135,18 @@ def inject_random_leak_segments(
         test_len   = int(round(test_fraction * n))
         test_start = max(0, n - test_len)
 
-        # Decide how many leaked points MUST land in test vs train
-        if placement == "tail":
-            desired_test_pts  = min(total_leak_pts, test_len)  # put all we can into test
-            desired_train_pts = total_leak_pts - desired_test_pts
-        else:
-            # Allocate exactly 5% of all rows as leaks in test
-            desired_test_pts = int(round(ensure_test_leak_abs_share * n))
-            desired_test_pts = min(desired_test_pts, test_len)
+        # Allocate exactly 5% of all rows as leaks in test
+        desired_test_pts = int(round(ensure_test_leak_abs_share * n))
+        desired_test_pts = min(desired_test_pts, test_len)
 
-            # The rest go to train, no spillover allowed
-            desired_train_pts = total_leak_pts - desired_test_pts
-            desired_train_pts = min(desired_train_pts, n - test_len)  # safety clamp
+        # The rest go to train, no spillover allowed
+        desired_train_pts = total_leak_pts - desired_test_pts
+        desired_train_pts = min(desired_train_pts, n - test_len)  # safety clamp
 
-            # If rounding/clamping caused mismatch, fix it here
-            if desired_test_pts + desired_train_pts != total_leak_pts:
-                # Force adjustment into train, never test
-                desired_train_pts = total_leak_pts - desired_test_pts
+        # If rounding/clamping caused mismatch, fix it here
+        if desired_test_pts + desired_train_pts != total_leak_pts:
+            # Force adjustment into train, never test
+            desired_train_pts = total_leak_pts - desired_test_pts
 
 
         # Helper to sample segment lengths that sum ~ target_pts
@@ -278,79 +272,6 @@ def inject_random_leak_segments(
 #endregion
 
 
-#region  Forecasting builder
-def build_forecasting_frame(
-    df_raw: pd.DataFrame,
-    target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = DELTA_VOLUME_COL,
-    lags: int = 24,
-    rolling_windows: Tuple[int, ...] = (6, 24),
-    include_labels: bool = False,   # label-free by default
-) -> pd.DataFrame:
-    """
-    Create past-only features for forecasting:
-      - FORECAST_Y_COL: target at time t (VOLUME_READING_COL or DELTA_VOLUME_COL)
-      - lag_1..lag_L of the chosen target
-      - rolling (mean/std) with shift(1)
-      - optional calendar features
-    """
-    df = df_raw.sort_values([METER_ID_COL, TIMESTAMP_COL]).copy()
-
-    if VOLUME_READING_COL not in df.columns:
-        df[VOLUME_READING_COL] = df[VOLUME_COL]
-
-    if target_col == DELTA_VOLUME_COL:
-        df["TargetBase"] = df[DELTA_VOLUME_COL]
-    else:
-        df["TargetBase"] = df[VOLUME_READING_COL]
-
-    out = []
-    for _, g in df.groupby(METER_ID_COL, sort=False):
-        g = g.sort_values(TIMESTAMP_COL).reset_index(drop=True)
-
-        # NEW (drop-in)
-        tb = g["TargetBase"]  # shorthand
-
-        # build lags all at once
-        lag_df = (
-            pd.DataFrame({f"lag_{k}": tb.shift(k) for k in range(1, lags + 1)}, index=g.index)
-            if lags > 0 else pd.DataFrame(index=g.index)
-        )
-
-        # build rolling stats all at once (past-only via shift(1))
-        past = tb.shift(1)
-        roll_dict = {}
-        for w in rolling_windows:
-            roll_dict[f"roll{w}_mean"] = past.rolling(w, min_periods=w).mean()
-            roll_dict[f"roll{w}_std"]  = past.rolling(w, min_periods=w).std()
-        roll_df = pd.DataFrame(roll_dict, index=g.index) if rolling_windows else pd.DataFrame(index=g.index)
-
-        # attach features in one shot
-        g = pd.concat([g, lag_df, roll_df], axis=1)
-
-
-        g[FORECAST_Y_COL] = g["TargetBase"]
-
-        warmup = max(lags, max(rolling_windows) if rolling_windows else 0)
-        g = g.iloc[warmup:].reset_index(drop=True)
-        out.append(g)
-
-    full = pd.concat(out, ignore_index=True)
-
-    keep = [METER_ID_COL, TIMESTAMP_COL, FORECAST_Y_COL]
-    keep += [c for c in full.columns if c.startswith("lag_") or c.startswith("roll")]
-    for cal in CALENDAR_COLS:
-        if cal in full.columns:
-            keep.append(cal)
-
-    if include_labels:
-        for maybe in [LEAK_FLAG_COL]:
-            if maybe in full.columns:
-                keep.append(maybe)
-
-    return full[keep]
-#endregion
-
-
 #region  Task-agnostic split/scale
 def time_based_group_split(
     df: pd.DataFrame,
@@ -374,7 +295,6 @@ def time_based_group_split(
     )
 
 
-
 def scale_on_train(
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
@@ -395,50 +315,22 @@ def scale_on_train(
 #region  Build Aggregated Dataset
 def build_aggregated_dataset(
     data_dir: Path,
-    use_forecast: bool,
     # classification knobs
     leak_mode: Literal["constant", "variable"] = "variable",
     n_segments_range: Tuple[int, int] = (2, 5),
     min_len_frac: float = 0.05,
-    # forecasting knobs
-    target_col: Literal[VOLUME_READING_COL, DELTA_VOLUME_COL] = VOLUME_READING_COL,
-    lags: int = 24,
-    rolling_windows: Tuple[int, ...] = (6, 24),
     test_fraction: float = 0.30,
-    forecast_include_labels: bool = False,
 ) -> pd.DataFrame:
     raw = load_and_merge(find_csvs(data_dir))
 
-    if not use_forecast:
-        df = inject_random_leak_segments(
-            raw,
-            leak_mode=leak_mode,
-            leak_share_total=0.20,
-            n_segments_range=n_segments_range,
-            min_len_frac=min_len_frac,
-            placement="random",
-            test_fraction=test_fraction,
-            ensure_test_leak_abs_share=0.05,       # 5% of ALL rows must be leaked in test
-        )
-        return df
-
-    df_with_labels = inject_random_leak_segments(
-    raw,
-    leak_mode=leak_mode,
-    leak_share_total=0.05,
-    n_segments_range=n_segments_range,
-    min_len_frac=min_len_frac,
-    placement="tail",
-    test_fraction=test_fraction,
-    ensure_test_leak_abs_share=0,
-)
-
-    return build_forecasting_frame(
-        df_with_labels,
-        target_col=target_col,
-        lags=lags,
-        rolling_windows=(6, 24, 168, 720),  # add weekly + monthly
-        include_labels=forecast_include_labels,
+    df = inject_random_leak_segments(
+        raw,
+        leak_mode=leak_mode,
+        leak_share_total=0.20,
+        n_segments_range=n_segments_range,
+        min_len_frac=min_len_frac,
+        test_fraction=test_fraction,
+        ensure_test_leak_abs_share=0.05,       # 5% of ALL rows must be leaked in test
     )
-
+    return df
 #endregion
