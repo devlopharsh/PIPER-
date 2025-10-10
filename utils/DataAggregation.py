@@ -311,6 +311,75 @@ def scale_on_train(
     return tr, te, scaler
 #endregion
 
+#region Data Gap Handling
+def impute_gaps_step_preserve(
+    df: pd.DataFrame,
+    meter_col: str,
+    ts_col: str,
+    vol_col: str,
+    freq: str = "h",
+    linear_small_gaps: int | None = None,
+    treat_zeros_as_nan: bool = False,   
+) -> pd.DataFrame:
+    """
+    Build a complete hourly index per meter.
+    Fill cumulative volume by:
+      - Carry-forward (step) through gaps to preserve total jump at the right anchor.
+      - (Optional) For gaps <= linear_small_gaps, do linear interpolation instead.
+    Returns an OUTER-complete dataframe and a boolean flag 'is_imputed'.
+    """
+    out = []
+    df = df.sort_values([meter_col, ts_col]).copy()
+
+    for m, g in df.groupby(meter_col, sort=False):
+        gi = g.copy()
+        gi.index = pd.to_datetime(gi[ts_col])
+
+        full_idx = pd.date_range(gi.index.min(), gi.index.max(), freq=freq)
+        vol = gi.set_index(ts_col)[vol_col].reindex(full_idx)  # inserts NaNs
+        
+        if treat_zeros_as_nan:
+            vol = vol.mask(vol == 0, np.nan)
+
+        # find contiguous missing runs
+        miss = vol.isna().values
+        vol_step = vol.copy()
+
+        # STEP: carry last observed forward (no extrapolation at the start)
+        vol_step = vol_step.ffill()
+
+        # keep NaN before first anchor so we don't invent earlier values
+        first_valid = np.where(~vol.isna())[0]
+        if len(first_valid) > 0:
+            vol_step.iloc[:first_valid[0]] = np.nan
+
+        # optional: small gaps can be linear to smooth tiny dropouts only
+        if linear_small_gaps is not None and linear_small_gaps > 0:
+            # identify gaps by length
+            idx = np.arange(len(vol))
+            gap_id = (miss != np.r_[False, miss[:-1]]).cumsum()
+            gap_len = pd.Series(0, index=idx)
+            gap_len[miss] = pd.Series(idx[miss]).groupby(gap_id[miss]).transform('count').values
+
+            # for gaps with length <= linear_small_gaps, do linear
+            # we operate on a copy that still has NaNs
+            vol_lin = vol.interpolate("time", limit=linear_small_gaps, limit_direction="both")
+            use_lin = miss & (gap_len.values <= linear_small_gaps)
+
+            vol_step[use_lin] = vol_lin[use_lin]
+
+        # reconstruct output frame + flags
+        gout = gi.set_index(ts_col).reindex(full_idx)
+        gout[f"{vol_col}_imputed"] = vol_step.values
+        gout["is_imputed"] = vol.isna().to_numpy()
+
+        gout[meter_col] = m
+        gout[ts_col] = gout.index
+
+        out.append(gout.reset_index(drop=True))
+
+    return pd.concat(out, ignore_index=True)
+
 
 #region  Build Aggregated Dataset
 def build_aggregated_dataset(
@@ -322,6 +391,16 @@ def build_aggregated_dataset(
     test_fraction: float = 0.30,
 ) -> pd.DataFrame:
     raw = load_and_merge(find_csvs(data_dir))
+    imp = impute_gaps_step_preserve(raw, METER_ID_COL, TIMESTAMP_COL, VOLUME_COL, freq="h", linear_small_gaps=2, treat_zeros_as_nan=True)
+
+    raw = raw.merge(
+        imp[[METER_ID_COL, TIMESTAMP_COL, f"{VOLUME_COL}_imputed", "is_imputed"]],
+        on=[METER_ID_COL, TIMESTAMP_COL],
+        how="outer"
+    ).sort_values([METER_ID_COL, TIMESTAMP_COL])
+
+    raw[VOLUME_COL] = raw[VOLUME_COL].fillna(raw[f"{VOLUME_COL}_imputed"])
+    raw.drop(columns=[f"{VOLUME_COL}_imputed"], inplace=True)
 
     df = inject_random_leak_segments(
         raw,
