@@ -23,6 +23,7 @@ from utils.DataAggregation import (
     time_based_group_split,
 )
 
+from utils.CvkFold import _make_group_forward_time_folds, _choose_threshold_fbeta
 # -----------------------------
 # Feature helpers
 # -----------------------------
@@ -31,6 +32,47 @@ def prepare_Xy(df: pd.DataFrame, feature_cols: List[str]):
     X = df[feature_cols].to_numpy(dtype=np.float32)
     y = (df[LEAK_FLAG_COL].to_numpy())
     return X, y
+
+def _cv_threshold_rf(
+    train_df: pd.DataFrame,
+    feature_cols: List[str],
+    *,
+    n_folds: int = 10,
+    n_estimators: int = 300,
+    max_depth: int | None = None,
+    min_samples_leaf: int = 1,
+    class_weight: str | None = "balanced_subsample",
+    max_features: str | int | float = "sqrt",
+    random_state: int = RANDOM_SEED_DEFAULT,
+) -> tuple[float, list[float]]:
+    folds = _make_group_forward_time_folds(train_df, n_folds=n_folds)
+    thr_list: list[float] = []
+    for tr_idx, va_idx in folds:
+        tr = train_df.loc[tr_idx].sort_values([METER_ID_COL])
+        va = train_df.loc[va_idx].sort_values([METER_ID_COL])
+
+        Xtr, ytr = prepare_Xy(tr, feature_cols)
+        Xva, yva = prepare_Xy(va, feature_cols)
+
+        clf = RandomForestClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            class_weight=class_weight,
+            max_features=max_features,
+            n_jobs=-1,
+            random_state=random_state,
+        )
+        clf.fit(Xtr, ytr)
+        probs = clf.predict_proba(Xva)[:, 1]
+        info = _choose_threshold_fbeta(yva, probs, beta=1.0)
+        thr_list.append(float(info["thr"]))
+
+    if not thr_list:
+        return 0.5, []
+    robust_thr = float(np.median(thr_list))
+    print(f"[CV-RF] thresholds={np.round(thr_list,3).tolist()} → robust_thr={robust_thr:.3f}")
+    return robust_thr, thr_list
 
 
 # -----------------------------
@@ -74,21 +116,35 @@ def train_and_eval_random_forest(
     # Guards for classification
     assert train_df[LEAK_FLAG_COL].nunique() == 2, "Train has a single class — adjust leak_fraction/test_size."
     assert test_df[LEAK_FLAG_COL].nunique() == 2, "Test has a single class — adjust split/segment params."
-
-    # 4) Fit
-    clf = RandomForestClassifier(
+    
+    # 4) Inner CV on TRAIN → robust threshold
+    cv_thr, cv_thr_list = _cv_threshold_rf(
+        train_df, feat_cols,
+        n_folds=10,
         n_estimators=n_estimators,
         max_depth=max_depth,
         min_samples_leaf=min_samples_leaf,
         class_weight=class_weight,
         max_features=max_features,
-        n_jobs=-1,
         random_state=random_state,
     )
+    print(f"[INFO] Using robust_thr={cv_thr:.3f} on TEST")
+
+    # 5) Fit final on FULL TRAIN
+    clf = RandomForestClassifier(
+         n_estimators=n_estimators,
+         max_depth=max_depth,
+         min_samples_leaf=min_samples_leaf,
+         class_weight=class_weight,
+         max_features=max_features,
+         n_jobs=-1,
+         random_state=random_state,
+     )
     clf.fit(X_train, y_train)
 
-    # 5) Evaluate (classification)
-    y_pred = clf.predict(X_test)
+    # 6) Evaluate with CV-threshold
+    probs = clf.predict_proba(X_test)[:, 1]
+    y_pred = (probs >= cv_thr).astype(int)
     acc = float(accuracy_score(y_test, y_pred))
     f1b = float(f1_score(y_test, y_pred, average="binary"))
     prec = float(precision_score(y_test, y_pred, zero_division=0))
@@ -109,6 +165,8 @@ def train_and_eval_random_forest(
         "cm": cm,
         "report": report,
         "model_path": str(model_path),
+        "thr": cv_thr,
+        "thr_list": [float(x) for x in cv_thr_list],
     }
 
 
