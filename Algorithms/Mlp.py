@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 import argparse
 import json
 import numpy as np
@@ -8,12 +8,14 @@ import joblib
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
+from sklearn.metrics import average_precision_score, fbeta_score
+from scipy.special import expit
+
 from sklearn.metrics import (
     accuracy_score, f1_score, precision_score, recall_score,
     classification_report, confusion_matrix,
-    mean_absolute_error, mean_squared_error,
 )
-import pandas as pd
+
 from utils.constants import (
     DATA_DIR, MODELS_DIR,
     METER_ID_COL, LEAK_FLAG_COL,
@@ -21,30 +23,13 @@ from utils.constants import (
     RANDOM_SEED_DEFAULT, TEST_SIZE_DEFAULT,
     DEVICE
 )
-from utils.ThresholdComputer import find_stable_threshold
-from sklearn.metrics import average_precision_score, fbeta_score, precision_recall_curve
-from scipy.special import expit
-
+from utils.CvkFold import get_cv_threshold_on_train
 
 from utils.DataAggregation import (
     build_aggregated_dataset,
     time_based_group_split,
     scale_on_train,
 )
-
-
-# ----------------------------- Helpers -----------------------------
-def set_seed(seed: int = RANDOM_SEED_DEFAULT) -> None:
-    import random
-    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-
-
-def to_xy(df: pd.DataFrame, feature_cols: List[str]):
-    X = df[feature_cols].to_numpy(dtype=np.float32)
-    y = df[LEAK_FLAG_COL].to_numpy(dtype=np.float32)  # BCEWithLogits expects float {0,1}
-    return X, y
 
 
 # ----------------------------- Model -----------------------------
@@ -83,7 +68,7 @@ def train_and_eval_mlp(
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
 ):
-    set_seed(seed)
+    torch.manual_seed(seed); np.random.seed(seed)
 
     # ------------------------- BUILD DATA -------------------------
     # Build classification frame with synthetic persistent leaks
@@ -97,48 +82,47 @@ def train_and_eval_mlp(
 
     # Time split per meter → train/test; then train_core/val
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
-    train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
 
     # Feature set (classification)
-    feat_cols = [c for c in CLS_FEATURE_COLS if c in train_core_df.columns]
+    feat_cols = [c for c in CLS_FEATURE_COLS if c in train_df.columns]
 
-    # Scale X on TRAIN-CORE only
-    tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feat_cols)
-    val_scaled = val_df.copy();  val_scaled[feat_cols] = scaler.transform(val_scaled[feat_cols])
+    # === Inner CV on TRAIN: robust threshold (tabular mode) ===
+    cv_thr, cv_thr_list = get_cv_threshold_on_train(
+        df_train=train_df,
+        feature_cols=feat_cols,
+        k_folds=10,
+        mode="tab",
+        make_model=lambda in_dim: MLP(in_dim=in_dim, hidden=list(hidden), p_drop=dropout),
+        batch_size=batch_size, lr=lr, weight_decay=weight_decay,
+        max_epochs=max_epochs, early_patience=early_patience,
+        seed=seed, beta_for_thr=1.0,
+    )
+    print(f"[CV] thresholds={np.round(cv_thr_list,3).tolist()} → robust_thr={cv_thr:.3f}")
+
+    # Scale στο FULL TRAIN
+    tr_scaled, _dummy, scaler = scale_on_train(train_df, train_df, feat_cols)
     te_scaled  = test_df.copy(); te_scaled[feat_cols]  = scaler.transform(te_scaled[feat_cols])
 
-    # Lock to common columns (defensive)
-    common_cols = [c for c in feat_cols
-                    if c in tr_core_scaled.columns
-                    and c in val_scaled.columns
-                    and c in te_scaled.columns]
-    feat_cols = common_cols
-
-    # Dataloaders
-    Xtr, ytr = to_xy(tr_core_scaled, feat_cols)
-    Xva, yva = to_xy(val_scaled,     feat_cols)
-    Xte, yte = to_xy(te_scaled,      feat_cols)
+    # Dataloaders για final train/test
+    Xtr = tr_scaled[feat_cols].to_numpy(np.float32)
+    ytr = tr_scaled[LEAK_FLAG_COL].to_numpy(np.float32)
+    Xte = te_scaled[feat_cols].to_numpy(np.float32)
+    yte = te_scaled[LEAK_FLAG_COL].to_numpy(np.float32)
 
     train_loader = DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)),
-                                batch_size=batch_size, shuffle=True,  num_workers=0)
-    val_loader   = DataLoader(TensorDataset(torch.from_numpy(Xva), torch.from_numpy(yva)),
-                                batch_size=batch_size, shuffle=False, num_workers=0)
+                            batch_size=batch_size, shuffle=True,  num_workers=0)
     test_loader  = DataLoader(TensorDataset(torch.from_numpy(Xte), torch.from_numpy(yte)),
-                                batch_size=batch_size, shuffle=False, num_workers=0)
+                            batch_size=batch_size, shuffle=False, num_workers=0)
 
-    # Infer input dim from batch
-    xb0, _ = next(iter(train_loader))
-    in_dim = xb0.shape[1]
+    # Model / loss
+    in_dim = Xtr.shape[1]
     model = MLP(in_dim=in_dim, hidden=list(hidden), p_drop=dropout).to(DEVICE)
-
-    # Loss/optim (class imbalance)
     pos = float(ytr.sum())
     pos_weight = (len(ytr) - pos) / (pos + 1e-6)
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], dtype=torch.float32, device=DEVICE))
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # Train + early stop on Val F1 (via stable threshold)
-    best_metric = -1.0; patience = 0
+    # Final train σε FULL TRAIN (χωρίς early stop εδώ — το threshold το έχουμε από CV)
     for ep in range(1, max_epochs + 1):
         model.train()
         for xb, yb in train_loader:
@@ -146,43 +130,13 @@ def train_and_eval_mlp(
             loss = criterion(model(xb), yb)
             optim.zero_grad(); loss.backward(); optim.step()
 
-        # Validate
-        model.eval()
-        with torch.no_grad():
-            logits, ys = [], []
-            for xb, yb in val_loader:
-                xb = xb.to(DEVICE)
-                logits.append(model(xb).cpu().numpy())
-                ys.append(yb.numpy())
-        y_scores = np.concatenate(logits).ravel()
-        y_true   = np.concatenate(ys).ravel()
-        y_probs  = expit(np.clip(y_scores, -20, 20))
-
-        beta = 1
-        stable_thr, thr_list = find_stable_threshold(y_true, y_probs, beta=beta, n_splits=5)
-        y_pred = (y_probs >= stable_thr).astype(int)
-
-        val_fbeta = fbeta_score(y_true, y_pred, beta=beta, average="binary", zero_division=0)
-        val_ap    = average_precision_score(y_true, y_probs)
-        print(f"[Epoch {ep:02d}] Val AP={val_ap:.4f} | Val F{beta}={val_fbeta:.4f} @thr={stable_thr:.3f}")
-
-        if val_fbeta > best_metric + 1e-4:
-            best_metric = val_fbeta; patience = 0
-            MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            torch.save(model.state_dict(), MODELS_DIR / "mlp_cls.pt")
-            joblib.dump(scaler, MODELS_DIR / "mlp_cls_scaler.joblib")
-            with open(MODELS_DIR / "mlp_cls_best_thr.txt", "w") as f:
-                f.write(str(stable_thr))
-        else:
-            patience += 1
-            if patience >= early_patience:
-                print("[INFO] Early stopping."); break
+    # Save
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), MODELS_DIR / "mlp_cls.pt")
+    joblib.dump(scaler, MODELS_DIR / "mlp_cls_scaler.joblib")
 
     # ---- Test ----
     model.load_state_dict(torch.load(MODELS_DIR / "mlp_cls.pt", map_location=DEVICE))
-    with open(MODELS_DIR / "mlp_cls_best_thr.txt") as f:
-        best_thr = float(f.read().strip())
-
     model.eval()
     with torch.no_grad():
         logits, ys = [], []
@@ -193,6 +147,8 @@ def train_and_eval_mlp(
     y_scores = np.concatenate(logits).ravel()
     y_true   = np.concatenate(ys).ravel()
     y_probs  = expit(np.clip(y_scores, -20, 20))
+
+    best_thr = cv_thr
     y_pred   = (y_probs >= best_thr).astype(int)
 
     acc  = float(accuracy_score(y_true, y_pred))

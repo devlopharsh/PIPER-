@@ -90,7 +90,7 @@ def train_and_eval_random_forest(
     # 5) Evaluate (classification)
     y_pred = clf.predict(X_test)
     acc = float(accuracy_score(y_test, y_pred))
-    f1m = float(f1_score(y_test, y_pred, average="macro"))
+    f1b = float(f1_score(y_test, y_pred, average="binary"))
     prec = float(precision_score(y_test, y_pred, zero_division=0))
     rec  = float(recall_score(y_test, y_pred, zero_division=0))
     cm   = confusion_matrix(y_test, y_pred).tolist()
@@ -105,7 +105,7 @@ def train_and_eval_random_forest(
         "accuracy": acc,
         "precision": prec,
         "recall": rec,
-        "f1_macro": f1m,
+        "f1_binary": f1b,
         "cm": cm,
         "report": report,
         "model_path": str(model_path),
@@ -135,8 +135,8 @@ if __name__ == "__main__":
 
     # classification builder knobs
     parser.add_argument("--test_fraction", type=float, default=0.30)
-    parser.add_argument("--n_segments_min", type=int, default=1)
-    parser.add_argument("--n_segments_max", type=int, default=3)
+    parser.add_argument("--n_segments_min", type=int, default=2)
+    parser.add_argument("--n_segments_max", type=int, default=5)
     parser.add_argument("--min_len_frac", type=float, default=0.05)
 
     args = parser.parse_args()

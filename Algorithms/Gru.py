@@ -26,7 +26,7 @@ from utils.DataAggregation import (
     time_based_group_split,
     scale_on_train,
 )
-from utils.ThresholdComputer import find_stable_threshold
+from utils.CvkFold import SeqDatasetCls, get_cv_threshold_on_train
 
 class GRUHead(nn.Module):
     """
@@ -54,30 +54,30 @@ class GRUHead(nn.Module):
         return out.squeeze(-1)      # [B, T]
 
 
-class SeqDatasetCls(torch.utils.data.Dataset):
-    def __init__(self, df, feature_cols, window=24, stride=1):
-        self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
+# class SeqDatasetCls(torch.utils.data.Dataset):
+#     def __init__(self, df, feature_cols, window=24, stride=1):
+#         self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
 
-    @staticmethod
-    def _build_sequences(df, feature_cols, window, stride):
-        Xs, ys = [], []
-        for _, g in df.sort_values([METER_ID_COL, TIMESTAMP_COL]).groupby(METER_ID_COL, sort=False):
-            g = g.reset_index(drop=True)
-            arr = g[feature_cols].to_numpy(dtype=np.float32)
-            labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)
-            n = len(g)
-            for start in range(0, n - window + 1, stride):
-                end = start + window
-                Xs.append(arr[start:end])
-                ys.append(labels[start:end])
-        if not Xs:
-            return (np.zeros((0, window, len(feature_cols)), np.float32),
-                    np.zeros((0, window), np.int64))
-        return np.stack(Xs), np.stack(ys)
+#     @staticmethod
+#     def _build_sequences(df, feature_cols, window, stride):
+#         Xs, ys = [], []
+#         for _, g in df.sort_values([METER_ID_COL, TIMESTAMP_COL]).groupby(METER_ID_COL, sort=False):
+#             g = g.reset_index(drop=True)
+#             arr = g[feature_cols].to_numpy(dtype=np.float32)
+#             labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)
+#             n = len(g)
+#             for start in range(0, n - window + 1, stride):
+#                 end = start + window
+#                 Xs.append(arr[start:end])
+#                 ys.append(labels[start:end])
+#         if not Xs:
+#             return (np.zeros((0, window, len(feature_cols)), np.float32),
+#                     np.zeros((0, window), np.int64))
+#         return np.stack(Xs), np.stack(ys)
 
-    def __len__(self): return len(self.y)
-    def __getitem__(self, i):
-        return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
+#     def __len__(self): return len(self.y)
+#     def __getitem__(self, i):
+#         return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
 
 
 
@@ -106,34 +106,49 @@ def train_and_eval_gru(
 
     # 2) Time-based per-meter split → train/test; then train_core/val
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
-    train_core_df, val_df = time_based_group_split(train_df, test_size=0.10, group_cols=[METER_ID_COL])
+    # === Inner CV on TRAIN: get robust threshold (forward-chaining, per-meter) ===
+    cv_thr, cv_thr_list = get_cv_threshold_on_train(
+        df_train=train_df,
+        feature_cols=feature_cols,
+        k_folds=10,
+        mode="seq",
+        window=window, stride=stride,
+        make_model=lambda in_dim: GRUHead(
+            in_dim=in_dim, hidden=hidden, num_layers=num_layers,
+            bidirectional=bidirectional, dropout=dropout
+        ),
+        batch_size=batch_size, lr=lr, weight_decay=weight_decay,
+        max_epochs=max_epochs, early_patience=early_patience,
+        seed=seed, beta_for_thr=1.0,
+    )
 
-    # 3) Scale on TRAIN-CORE only
-    tr_core_scaled, _dummy, scaler = scale_on_train(train_core_df, train_core_df, feature_cols)
-    val_scaled = val_df.copy();   val_scaled[feature_cols]  = scaler.transform(val_scaled[feature_cols])
-    test_scaled = test_df.copy(); test_scaled[feature_cols] = scaler.transform(test_scaled[feature_cols])
+    print(f"[CV] thresholds={np.round(cv_thr_list,3).tolist()} → robust_thr={cv_thr:.3f}")
 
-    # 4) Sequences
-    train_ds = SeqDatasetCls(tr_core_scaled, feature_cols, window=window, stride=stride)
-    val_ds   = SeqDatasetCls(val_scaled,     feature_cols, window=window, stride=stride)
-    test_ds  = SeqDatasetCls(test_scaled,    feature_cols, window=window, stride=stride)
-    if len(train_ds)==0 or len(val_ds)==0 or len(test_ds)==0:
-        raise RuntimeError("Empty split after windowing. Adjust window/stride or check data coverage.")
+    # 3) Scale features on the FULL TRAIN
+    tr_scaled, _, scaler = scale_on_train(train_df, train_df, feature_cols)
+    test_scaled = test_df.copy()
+    test_scaled[feature_cols] = scaler.transform(test_scaled[feature_cols])
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
-    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
+    # 4) Build datasets/loaders
+    train_ds = SeqDatasetCls(tr_scaled, feature_cols, window=window, stride=stride)
+    test_ds  = SeqDatasetCls(test_scaled, feature_cols, window=window, stride=stride)
+    if len(train_ds) == 0 or len(test_ds) == 0:
+        raise RuntimeError("Empty split after windowing. Reduce window/stride or check data coverage.")
 
-    # 5) Handle imbalance via pos_weight in BCE
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
+    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, num_workers=0)
+
+    # 5) Imbalance weight on FULL TRAIN
     y_seq = train_ds.y.ravel()
-    pos_w = (len(y_seq) - y_seq.sum()) / (y_seq.sum() + 1e-6)
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_w], dtype=torch.float32, device=DEVICE))
+    pos_weight = torch.tensor([(len(y_seq) - y_seq.sum()) / (y_seq.sum() + 1e-6)],
+                            dtype=torch.float32, device=DEVICE)
 
+    # 6) Final model: train for max_epochs on FULL TRAIN (no early stopping)
     model = GRUHead(in_dim=len(feature_cols), hidden=hidden, num_layers=num_layers,
                     bidirectional=bidirectional, dropout=dropout).to(DEVICE)
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    best, patience = -1.0, 0
     for ep in range(1, max_epochs + 1):
         model.train()
         for xb, yb in train_loader:
@@ -142,39 +157,12 @@ def train_and_eval_gru(
             loss = criterion(model(xb), yb)
             optim.zero_grad(); loss.backward(); optim.step()
 
-        # Validate
-        model.eval()
-        with torch.no_grad():
-            vscores, vtrue = [], []
-            for xb, yb in val_loader:
-                vscores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-                vtrue.append(yb.numpy())
-            vscores = np.concatenate(vscores).ravel()
-            vtrue   = np.concatenate(vtrue).ravel()
+    # Save model + scaler
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), MODELS_DIR / "gru_cls.pt")
+    joblib.dump(scaler, MODELS_DIR / "gru_cls_scaler.joblib")
 
-        vprobs = expit(np.clip(vscores, -20, 20))
-        beta = 1
-        stable_thr, thr_list = find_stable_threshold(vtrue, vprobs, beta=beta, n_splits=5)
-        vpred = (vprobs >= stable_thr).astype(int)
-        vF = fbeta_score(vtrue, vpred, beta=beta, average="binary", zero_division=0)
-        vAP = average_precision_score(vtrue, vprobs)
-        print(f"[Epoch {ep:02d}] Val AP={vAP:.4f} | Val F{beta}={vF:.4f} @thr={stable_thr:.3f}")
-        
-        metric_for_early_stop = vF
-
-        if metric_for_early_stop > best + 1e-4:
-            best, patience = vF, 0
-            MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            torch.save(model.state_dict(), MODELS_DIR / "gru_cls.pt")
-            joblib.dump(scaler, MODELS_DIR / "gru_cls_scaler.joblib")
-            with open(MODELS_DIR / "gru_cls_best_thr.txt", "w") as f:
-                f.write(str(stable_thr))
-        else:
-            patience += 1
-            if patience >= early_patience:
-                print("[INFO] Early stopping."); break
-
-    # Test
+    # 7) Test evaluation (threshold from CV)
     model.load_state_dict(torch.load(MODELS_DIR / "gru_cls.pt", map_location=DEVICE))
     model.eval()
     with torch.no_grad():
@@ -182,15 +170,15 @@ def train_and_eval_gru(
         for xb, yb in test_loader:
             scores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
             ytrue.append(yb.numpy())
-        scores = np.concatenate(scores).ravel()
-        ytrue  = np.concatenate(ytrue).ravel()
+    scores = np.concatenate(scores).ravel()
+    ytrue  = np.concatenate(ytrue).ravel()
+    probs  = expit(np.clip(scores, -20, 20))
 
-    probs = expit(np.clip(scores, -20, 20))
-    with open(MODELS_DIR / "gru_cls_best_thr.txt") as f:
-        best_thr = float(f.read().strip())
+    best_thr = cv_thr
+    print(f"[INFO] Using CV robust threshold={best_thr:.3f} on TEST")
     ypred = (probs >= best_thr).astype(int)
     
-    print(f"[INFO] CV thresholds={thr_list}, using stable_thr={best_thr:.3f}")
+    print(f"[INFO] CV thresholds={cv_thr_list}, using stable_thr={best_thr:.3f}")
 
     # --- Metrics ---
     acc  = accuracy_score(ytrue, ypred)

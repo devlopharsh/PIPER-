@@ -54,8 +54,8 @@ MLP_DEFAULTS = dict(
     batch_size=256,
     lr=1e-3,
     weight_decay=1e-5,
-    max_epochs=20,
-    early_patience=10,
+    max_epochs=10,
+    early_patience=4,
 )
 
 # LSTM
@@ -71,7 +71,7 @@ class LSTMDefaults:
     dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5
-    early_patience: int = 10
+    early_patience: int = 4
 
 LSTM_DEFAULTS = LSTMDefaults()
 
@@ -84,15 +84,10 @@ class GRUDefaults:
     num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 15
+    max_epochs: int = 10
     dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5
-    early_patience: int = 10
+    early_patience: int = 4
 
 GRU_DEFAULTS = GRUDefaults()
-
-
-# SVM / MLflow (only used where relevant)
-MLFLOW_URI_DEFAULT = "file:./mlruns"
-MLFLOW_EXPERIMENT_DEFAULT = "LeakDetection-SVM"

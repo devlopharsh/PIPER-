@@ -13,13 +13,12 @@ from sklearn.metrics import (
     average_precision_score, fbeta_score
 )
 from scipy.special import expit
-from utils.ThresholdComputer import find_stable_threshold
+from utils.CvkFold import SeqDatasetCls, get_cv_threshold_on_train
 
 # ---- Project utilities / constants
 from utils.constants import (
     DATA_DIR, MODELS_DIR,
-    METER_ID_COL, TIMESTAMP_COL,
-    LEAK_FLAG_COL, DEVICE,
+    METER_ID_COL, TIMESTAMP_COL, DEVICE,
     CLS_FEATURE_COLS, LSTM_DEFAULTS,
     TEST_SIZE_DEFAULT, RANDOM_SEED_DEFAULT
 )
@@ -28,47 +27,6 @@ from utils.DataAggregation import (
     time_based_group_split,
     scale_on_train,
 )
-
-
-#region Datasets for classification
-class SeqDatasetCls(Dataset):
-    """
-    Classification dataset (per hour).
-    - Each window is [T, F]
-    - Labels are [T] (one label for each timestep, not only the last).
-    """
-    def __init__(self, df: pd.DataFrame, feature_cols: list[str], window: int = 24, stride: int = 1):
-        self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
-
-    @staticmethod
-    def _build_sequences(df: pd.DataFrame, feature_cols: list[str], window: int, stride: int):
-        Xs, ys = [], []
-        # Group by meter so sequences from different meters do not mix
-        for _, g in df.sort_values([METER_ID_COL, TIMESTAMP_COL]).groupby(METER_ID_COL, sort=False):
-            g = g.reset_index(drop=True)
-            arr = g[feature_cols].to_numpy(dtype=np.float32)    # [N, F]
-            labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)  # [N]
-            n = len(g)
-            # Sliding windows
-            for start in range(0, n - window + 1, stride):
-                end = start + window
-                Xs.append(arr[start:end])      # [T, F]
-                ys.append(labels[start:end])   # [T]
-        if not Xs:
-            return (
-                np.zeros((0, window, len(feature_cols)), np.float32),
-                np.zeros((0, window), np.int64),
-            )
-        return np.stack(Xs), np.stack(ys)
-
-    def __len__(self): 
-        return len(self.y)
-
-    def __getitem__(self, i): 
-        return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
-
-#endregion
-
 
 #region LSTM Model
 class LSTMHead(nn.Module):
@@ -98,152 +56,6 @@ class LSTMHead(nn.Module):
 #endregion
 
 
-# --- K-FOLD CV (forward-chaining per meter) helpers ---
-def _make_group_forward_time_folds(df_in: pd.DataFrame, n_folds: int = 10):
-    df_in = df_in.sort_values([METER_ID_COL, TIMESTAMP_COL]).copy()
-    folds = [( [], [] ) for _ in range(n_folds)]
-    for _, g in df_in.groupby(METER_ID_COL, sort=False):
-        n = len(g)
-        if n < n_folds + 1:  # skip very short series
-            continue
-        cuts = [int(np.floor((k+1)/n_folds * n)) for k in range(n_folds)]
-        cuts[-1] = n
-        for k in range(n_folds):
-            cut_k  = cuts[k]
-            next_k = cuts[k+1] if k+1 < n_folds else n
-            tr = g.iloc[:cut_k].index.to_list()
-            va = g.iloc[cut_k:next_k].index.to_list()
-            if va:
-                folds[k][0].extend(tr)
-                folds[k][1].extend(va)
-    out = []
-    for tr, va in folds:
-        tr = np.unique(np.asarray(tr, int))
-        va = np.unique(np.asarray(va, int))
-        va = va[~np.isin(va, tr)]
-        if len(tr) and len(va):
-            out.append((tr, va))
-    return out
-
-
-def _choose_threshold_fbeta(y_true: np.ndarray, probs: np.ndarray, beta: float = 1.0):
-    from sklearn.metrics import precision_recall_curve, average_precision_score
-    p, r, thr = precision_recall_curve(y_true, probs)
-    thr = np.append(thr, 1.0)
-    f = (1 + beta**2) * (p * r) / (beta**2 * p + r + 1e-12)
-    i = int(np.nanargmax(f))
-    return {
-        "thr": float(thr[i]),
-        "fbeta": float(f[i]),
-        "prec": float(p[i]),
-        "rec": float(r[i]),
-        "ap": float(average_precision_score(y_true, probs)),
-    }
-
-
-def _cv_threshold_on_train(
-    df_train: pd.DataFrame,
-    feature_cols: list[str],
-    *,
-    k_folds: int = 10,
-    window: int = 24, stride: int = 1,
-    hidden: int = 64, num_layers: int = 1, bidirectional: bool = False,
-    batch_size: int = 256, lr: float = 1e-3, weight_decay: float = 1e-5,
-    max_epochs: int = 5, early_patience: int = 2,
-    dropout: float = 0.1, seed: int = 42, beta_for_thr: float = 1.0,
-) -> tuple[float, list[float]]:
-    """
-    Forward-chaining K-fold CV ONLY on the training split to pick a robust probability threshold.
-    Returns (robust_threshold, list_of_per_fold_thresholds).
-    """
-    torch.manual_seed(seed); np.random.seed(seed)
-    folds = _make_group_forward_time_folds(df_train, n_folds=k_folds)
-    thr_list: list[float] = []
-
-    for k, (tr_idx, va_idx) in enumerate(folds, start=1):
-        tr = df_train.loc[tr_idx].sort_values([METER_ID_COL, TIMESTAMP_COL])
-        va = df_train.loc[va_idx].sort_values([METER_ID_COL, TIMESTAMP_COL])
-
-        # scale on fold-train only (no leakage)
-        tr_scaled, _, scaler_f = scale_on_train(tr, tr, feature_cols)
-        va_scaled = va.copy()
-        va_scaled[feature_cols] = scaler_f.transform(va_scaled[feature_cols])
-
-        tr_ds = SeqDatasetCls(tr_scaled, feature_cols, window=window, stride=stride)
-        va_ds = SeqDatasetCls(va_scaled, feature_cols, window=window, stride=stride)
-        if len(tr_ds) == 0 or len(va_ds) == 0:
-            continue
-
-        tr_loader = DataLoader(tr_ds, batch_size=batch_size, shuffle=True,  num_workers=0)
-        va_loader = DataLoader(va_ds, batch_size=batch_size, shuffle=False, num_workers=0)
-
-        # imbalance weight from fold-train
-        y_seq = tr_ds.y.ravel()
-        pos_w = (len(y_seq) - y_seq.sum()) / (y_seq.sum() + 1e-6)
-        pos_weight_f = torch.tensor([pos_w], dtype=torch.float32, device=DEVICE)
-
-        model_f = LSTMHead(
-            in_dim=len(feature_cols), hidden=hidden, num_layers=num_layers,
-            bidirectional=bidirectional, dropout=dropout
-        ).to(DEVICE)
-        opt_f = torch.optim.Adam(model_f.parameters(), lr=lr, weight_decay=weight_decay)
-        crit_f = nn.BCEWithLogitsLoss(pos_weight=pos_weight_f)
-
-        bestF, patience, best_state = -1.0, 0, None
-
-        for _ in range(max_epochs):
-            model_f.train()
-            for xb, yb in tr_loader:
-                xb = xb.to(DEVICE, dtype=torch.float32)
-                yb = yb.to(DEVICE, dtype=torch.float32)
-                loss = crit_f(model_f(xb), yb)
-                opt_f.zero_grad(); loss.backward(); opt_f.step()
-
-            # fold-val → provisional threshold
-            model_f.eval()
-            with torch.no_grad():
-                vs, yt = [], []
-                for xb, yb in va_loader:
-                    vs.append(model_f(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-                    yt.append(yb.numpy())
-            yt = np.concatenate(yt).ravel()
-            vp = expit(np.clip(np.concatenate(vs).ravel(), -20, 20))
-            info = _choose_threshold_fbeta(yt, vp, beta=beta_for_thr)
-            vpred = (vp >= info["thr"]).astype(int)
-            vF = fbeta_score(yt, vpred, beta=beta_for_thr, average="binary", zero_division=0)
-
-            if vF > bestF + 1e-4:
-                bestF, patience = vF, 0
-                best_state = {k: v.clone() for k, v in model_f.state_dict().items()}
-            else:
-                patience += 1
-                if patience >= early_patience:
-                    break
-
-        # evaluate at best weights for the fold to get the fold's threshold
-        if best_state is not None:
-            model_f.load_state_dict(best_state)
-        model_f.eval()
-        with torch.no_grad():
-            vs, yt = [], []
-            for xb, yb in va_loader:
-                vs.append(model_f(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-                yt.append(yb.numpy())
-        yt = np.concatenate(yt).ravel()
-        vp = expit(np.clip(np.concatenate(vs).ravel(), -20, 20))
-        info = _choose_threshold_fbeta(yt, vp, beta=beta_for_thr)
-
-        thr_list.append(float(info["thr"]))
-        print(f"[CV fold {k:02d}] thr={info['thr']:.3f}  Fβ={info['fbeta']:.4f}  P={info['prec']:.4f}  R={info['rec']:.4f}")
-
-    if not thr_list:
-        return 0.5, []
-
-    robust_thr = float(np.median(thr_list))
-    print(f"[CV] thresholds={np.round(thr_list,3).tolist()} → robust_thr={robust_thr:.3f}")
-    return robust_thr, thr_list
-
-
 #region Model Training & Evaluation
 def train_and_eval_lstm(
     data_dir: Path,
@@ -270,14 +82,18 @@ def train_and_eval_lstm(
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
 
     # === Inner CV on TRAIN: get robust threshold (forward-chaining, per-meter) ===
-    cv_thr, cv_thr_list = _cv_threshold_on_train(
+    cv_thr, cv_thr_list = get_cv_threshold_on_train(
         df_train=train_df,
         feature_cols=feature_cols,
         k_folds=10,
+        mode="seq",
         window=window, stride=stride,
-        hidden=hidden, num_layers=num_layers, bidirectional=bidirectional,
+        make_model=lambda in_dim: LSTMHead(
+            in_dim=in_dim, hidden=hidden, num_layers=num_layers,
+            bidirectional=bidirectional, dropout=dropout
+        ),
         batch_size=batch_size, lr=lr, weight_decay=weight_decay,
-        max_epochs=max_epochs, early_patience=early_patience, dropout=dropout,
+        max_epochs=max_epochs, early_patience=early_patience,
         seed=seed, beta_for_thr=1.0,
     )
 
@@ -338,7 +154,7 @@ def train_and_eval_lstm(
 
     # --- Metrics ---
     acc  = accuracy_score(ytrue, ypred)
-    f1m  = f1_score(ytrue, ypred, average="binary")
+    f1b  = f1_score(ytrue, ypred, average="binary")
     prec = precision_score(ytrue, ypred, average="binary", zero_division=0)
     rec  = recall_score(ytrue, ypred, average="binary", zero_division=0)
     f2_bin = fbeta_score(ytrue, ypred, beta=2.0, average="binary", zero_division=0)
@@ -347,7 +163,7 @@ def train_and_eval_lstm(
     print("Classification report:\n", classification_report(ytrue, ypred, digits=4))
     print("Confusion matrix:\n", confusion_matrix(ytrue, ypred))
     print(f"Accuracy:  {acc:.4f}")
-    print(f"F1:       {f1m:.4f}")
+    print(f"F1:       {f1b:.4f}")
     print(f"Precision:{prec:.4f}")
     print(f"Recall:   {rec:.4f}")
     print(f"[TEST] PR-AUC={ap:.4f} | F2={f2_bin:.4f} | thr={best_thr:.3f}")
@@ -356,7 +172,7 @@ def train_and_eval_lstm(
         "task": "cls",
         "model": "LSTM",
         "accuracy": float(acc),
-        "f1_macro": float(f1m),
+        "f1_binary": float(f1b),
         "precision": float(prec),
         "recall": float(rec),
         "f2_leak": float(f2_bin)
@@ -388,8 +204,8 @@ if __name__ == "__main__":
     p.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
 
     # Classification knobs (affect how synthetic leaks are injected):
-    p.add_argument("--n_segments_min", type=int, default=1)
-    p.add_argument("--n_segments_max", type=int, default=3)
+    p.add_argument("--n_segments_min", type=int, default=2)
+    p.add_argument("--n_segments_max", type=int, default=5)
     p.add_argument("--min_len_frac", type=float, default=0.05)
 
     args = p.parse_args()
