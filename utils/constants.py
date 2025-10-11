@@ -67,7 +67,7 @@ class LSTMDefaults:
     num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
-    max_epochs: int = 30
+    max_epochs: int = 10
     dropout: float = 0.2
     lr: float = 1e-3
     weight_decay: float = 1e-5
