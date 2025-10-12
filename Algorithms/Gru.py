@@ -27,6 +27,7 @@ from utils.DataAggregation import (
     scale_on_train,
 )
 from utils.CvkFold import SeqDatasetCls, get_cv_threshold_on_train
+import json
 
 class GRUHead(nn.Module):
     """
@@ -34,8 +35,8 @@ class GRUHead(nn.Module):
     For classification: use BCEWithLogitsLoss on [B, T].
     For forecasting (regression): use MSELoss on [B, T].
     """
-    def __init__(self, in_dim: int, hidden: int = 64, num_layers: int = 1,
-                 bidirectional: bool = False, dropout: float = 0.2):
+    def __init__(self, in_dim: int, hidden: int = GRU_DEFAULTS.hidden, num_layers: int = GRU_DEFAULTS.num_layers,
+                 bidirectional: bool = GRU_DEFAULTS.bidirectional, dropout: float = GRU_DEFAULTS.dropout):
         super().__init__()
         self.gru = nn.GRU(
             input_size=in_dim,
@@ -79,6 +80,11 @@ def train_and_eval_gru(
 
     # 2) Time-based per-meter split → train/test; then train_core/val
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
+    ART = MODELS_DIR / "artifacts"
+    ART.mkdir(parents=True, exist_ok=True)
+    train_df.to_parquet(ART / "train_agg.parquet", index=False) # optional
+    test_df.to_parquet(ART / "test_agg.parquet", index=False)
+    print(f"[ARTIFACTS] Saved frozen splits under {ART}")
     # === Inner CV on TRAIN: get robust threshold (forward-chaining, per-meter) ===
     cv_thr, cv_thr_list = get_cv_threshold_on_train(
         df_train=train_df,
@@ -94,8 +100,6 @@ def train_and_eval_gru(
         max_epochs=max_epochs, early_patience=early_patience,
         seed=seed, beta_for_thr=1.0,
     )
-
-    print(f"[CV] thresholds={np.round(cv_thr_list,3).tolist()} → robust_thr={cv_thr:.3f}")
 
     # 3) Scale features on the FULL TRAIN
     tr_scaled, _, scaler = scale_on_train(train_df, train_df, feature_cols)
@@ -133,7 +137,24 @@ def train_and_eval_gru(
     # Save model + scaler
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), MODELS_DIR / "gru_cls.pt")
+    # Save robust threshold για deployment (προαιρετικό)
+    (MODELS_DIR / "gru_cls_thr.txt").write_text(f"{cv_thr:.6f}")
     joblib.dump(scaler, MODELS_DIR / "gru_cls_scaler.joblib")
+    meta = {
+    "model": "GRUHead",
+    "task": "cls",
+    "thr": float(cv_thr),
+    "window": int(window),
+    "stride": int(stride),
+    "in_dim": len(feature_cols),
+    "feature_cols": list(feature_cols),
+    "hidden": int(hidden),
+    "num_layers": int(num_layers),
+    "bidirectional": bool(bidirectional),
+    "dropout": float(dropout),
+    }
+    (MODELS_DIR / "gru_cls_meta.json").write_text(json.dumps(meta, indent=2))
+    print(f"[META] Saved {MODELS_DIR/'gru_cls_meta.json'}")
 
     # 7) Test evaluation (threshold from CV)
     model.load_state_dict(torch.load(MODELS_DIR / "gru_cls.pt", map_location=DEVICE))
