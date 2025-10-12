@@ -54,33 +54,6 @@ class GRUHead(nn.Module):
         return out.squeeze(-1)      # [B, T]
 
 
-# class SeqDatasetCls(torch.utils.data.Dataset):
-#     def __init__(self, df, feature_cols, window=24, stride=1):
-#         self.X, self.y = self._build_sequences(df, feature_cols, window, stride)
-
-#     @staticmethod
-#     def _build_sequences(df, feature_cols, window, stride):
-#         Xs, ys = [], []
-#         for _, g in df.sort_values([METER_ID_COL, TIMESTAMP_COL]).groupby(METER_ID_COL, sort=False):
-#             g = g.reset_index(drop=True)
-#             arr = g[feature_cols].to_numpy(dtype=np.float32)
-#             labels = g[LEAK_FLAG_COL].to_numpy(dtype=np.int64)
-#             n = len(g)
-#             for start in range(0, n - window + 1, stride):
-#                 end = start + window
-#                 Xs.append(arr[start:end])
-#                 ys.append(labels[start:end])
-#         if not Xs:
-#             return (np.zeros((0, window, len(feature_cols)), np.float32),
-#                     np.zeros((0, window), np.int64))
-#         return np.stack(Xs), np.stack(ys)
-
-#     def __len__(self): return len(self.y)
-#     def __getitem__(self, i):
-#         return torch.from_numpy(self.X[i]), torch.from_numpy(self.y[i])
-
-
-
 def train_and_eval_gru(
     data_dir: Path,
     # shared
@@ -166,13 +139,19 @@ def train_and_eval_gru(
     model.load_state_dict(torch.load(MODELS_DIR / "gru_cls.pt", map_location=DEVICE))
     model.eval()
     with torch.no_grad():
-        scores, ytrue = [], []
+        s_list, y_list = [], []
         for xb, yb in test_loader:
-            scores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-            ytrue.append(yb.numpy())
-    scores = np.concatenate(scores).ravel()
-    ytrue  = np.concatenate(ytrue).ravel()
-    probs  = expit(np.clip(scores, -20, 20))
+            logits_bt = model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy()  # [B,T]
+            s_list.append(logits_bt)
+            y_list.append(yb.numpy())
+
+    scores_bt = np.concatenate(s_list, axis=0)   # [Nw, T]
+    y_bt      = np.concatenate(y_list, axis=0)   # [Nw, T]
+
+    scores_last = scores_bt[:, -1]               # [Nw]
+    ytrue_last  = y_bt[:, -1]                    # [Nw]
+    probs       = expit(np.clip(scores_last, -20, 20))
+    ytrue = ytrue_last
 
     best_thr = cv_thr
     print(f"[INFO] Using CV robust threshold={best_thr:.3f} on TEST")

@@ -180,13 +180,16 @@ def get_cv_threshold_on_train(
             with torch.no_grad():
                 vs, yt = [], []
                 for xb, yb in va_loader:
-                    vs.append(model_f(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-                    yt.append(yb.numpy())
-            yt = np.concatenate(yt).ravel()
-            vp = expit(np.clip(np.concatenate(vs).ravel(), -20, 20))
-            info = _choose_threshold_fbeta(yt, vp, beta=beta_for_thr)
-            vpred = (vp >= info["thr"]).astype(int)
-            vF = fbeta_score(yt, vpred, beta=beta_for_thr, average="binary", zero_division=0)
+                    vs.append(model_f(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())  # [B,T]
+                    yt.append(yb.numpy())                                                # [B,T]
+            yt_bt = np.concatenate(yt, axis=0)                          # [Nw, T]
+            vp_bt = expit(np.clip(np.concatenate(vs, axis=0), -20, 20)) # [Nw, T]
+            yt_1h = yt_bt[:, -1].ravel()                                 # last step
+            vp_1h = vp_bt[:, -1].ravel()
+
+            info = _choose_threshold_fbeta(yt_1h, vp_1h, beta=beta_for_thr)
+            vpred = (vp_1h >= info["thr"]).astype(int)
+            vF = fbeta_score(yt_1h, vpred, beta=beta_for_thr, average="binary", zero_division=0)
 
             if vF > bestF + 1e-4:
                 bestF, patience = vF, 0
@@ -196,7 +199,7 @@ def get_cv_threshold_on_train(
                 if patience >= early_patience:
                     break
 
-        # Evaluate στο καλύτερο state για να κρατήσουμε το fold-threshold
+        # Evaluate στο καλύτερο state για να κρατήσουμε το fold-threshold (last-step)
         if best_state is not None:
             model_f.load_state_dict(best_state)
         model_f.eval()
@@ -205,9 +208,11 @@ def get_cv_threshold_on_train(
             for xb, yb in va_loader:
                 vs.append(model_f(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
                 yt.append(yb.numpy())
-        yt = np.concatenate(yt).ravel()
-        vp = expit(np.clip(np.concatenate(vs).ravel(), -20, 20))
-        info = _choose_threshold_fbeta(yt, vp, beta=beta_for_thr)
+        yt_bt = np.concatenate(yt, axis=0)
+        vp_bt = expit(np.clip(np.concatenate(vs, axis=0), -20, 20))
+        yt_1h = yt_bt[:, -1].ravel()
+        vp_1h = vp_bt[:, -1].ravel()
+        info = _choose_threshold_fbeta(yt_1h, vp_1h, beta=beta_for_thr)
 
         thr_list.append(float(info["thr"]))
         print(f"[CV fold {k:02d}] thr={info['thr']:.3f}  Fβ={info['fbeta']:.4f}  P={info['prec']:.4f}  R={info['rec']:.4f}")

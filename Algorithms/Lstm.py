@@ -140,43 +140,30 @@ def train_and_eval_lstm(
     model.load_state_dict(torch.load(MODELS_DIR / "lstm_cls.pt", map_location=DEVICE))
     model.eval()
     with torch.no_grad():
-        scores, ytrue = [], []
+        s_list, y_list = [], []
         for xb, yb in test_loader:
-            scores.append(model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy())
-            ytrue.append(yb.numpy())
-    scores = np.concatenate(scores).ravel()
-    ytrue  = np.concatenate(ytrue).ravel()
-    probs  = expit(np.clip(scores, -20, 20))
+            logits_bt = model(xb.to(DEVICE, dtype=torch.float32)).cpu().numpy()  # [B,T]
+            s_list.append(logits_bt)
+            y_list.append(yb.numpy())
+
+    scores_bt = np.concatenate(s_list, axis=0)             # [Nw, T]
+    y_bt      = np.concatenate(y_list, axis=0)             # [Nw, T]
+    scores_last = scores_bt[:, -1]                         # [Nw]
+    ytrue_last  = y_bt[:, -1]                              # [Nw]
+    probs       = expit(np.clip(scores_last, -20, 20))     # [Nw]
 
     best_thr = cv_thr
-    print(f"[INFO] Using CV robust threshold={best_thr:.3f} on TEST")
     ypred = (probs >= best_thr).astype(int)
-
-    # --- Metrics ---
-    acc  = accuracy_score(ytrue, ypred)
-    f1b  = f1_score(ytrue, ypred, average="binary")
-    prec = precision_score(ytrue, ypred, average="binary", zero_division=0)
-    rec  = recall_score(ytrue, ypred, average="binary", zero_division=0)
-    f2_bin = fbeta_score(ytrue, ypred, beta=2.0, average="binary", zero_division=0)
-    ap = average_precision_score(ytrue, probs)
+    ytrue = ytrue_last
 
     print("Classification report:\n", classification_report(ytrue, ypred, digits=4))
     print("Confusion matrix:\n", confusion_matrix(ytrue, ypred))
-    print(f"Accuracy:  {acc:.4f}")
-    print(f"F1:       {f1b:.4f}")
-    print(f"Precision:{prec:.4f}")
-    print(f"Recall:   {rec:.4f}")
-    print(f"[TEST] PR-AUC={ap:.4f} | F2={f2_bin:.4f} | thr={best_thr:.3f}")
-
-    return {
-        "task": "cls",
-        "model": "LSTM",
-        "accuracy": float(acc),
-        "f1_binary": float(f1b),
-        "precision": float(prec),
-        "recall": float(rec),
-        "f2_leak": float(f2_bin)
-    }
+    print(f"Accuracy:  {accuracy_score(ytrue, ypred):.4f}")
+    print(f"F1:       {f1_score(ytrue, ypred, average='binary'):.4f}")
+    print(f"Precision:{precision_score(ytrue, ypred, zero_division=0):.4f}")
+    print(f"Recall:   {recall_score(ytrue, ypred, zero_division=0):.4f}")
+    print(f"[TEST] PR-AUC={average_precision_score(ytrue, probs):.4f} | "
+        f"F2={fbeta_score(ytrue, ypred, beta=2.0, zero_division=0):.4f} | thr={best_thr:.3f}")
     #endregion
 #endregion
 
