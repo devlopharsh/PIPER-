@@ -101,7 +101,6 @@ def train_and_eval_random_forest(
     # 1) Build dataset
     df = build_aggregated_dataset(
         data_dir=data_dir,
-        leak_mode="variable",
         test_fraction=test_fraction,
         n_segments_range=(n_segments_min, n_segments_max),
         min_len_frac=min_len_frac,
