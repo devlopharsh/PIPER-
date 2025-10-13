@@ -30,6 +30,7 @@ from utils.DataAggregation import (
     time_based_group_split,
     scale_on_train,
 )
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
 
 
 # ----------------------------- Model -----------------------------
@@ -179,30 +180,25 @@ def train_and_eval_mlp(
 
 # ----------------------------- CLI -----------------------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MLP — classification")
-    parser.add_argument("--data_dir", type=Path, default=str(DATA_DIR))
-
-    # Arch
-    parser.add_argument("--hidden", nargs="+", type=int, default=MLP_DEFAULTS.hidden)
-    parser.add_argument("--dropout", type=float, default=MLP_DEFAULTS.dropout)
-
-    # Opt
-    parser.add_argument("--batch_size", type=int, default=MLP_DEFAULTS.batch_size)
-    parser.add_argument("--lr", type=float, default=MLP_DEFAULTS.lr)
-    parser.add_argument("--weight_decay", type=float, default=MLP_DEFAULTS.weight_decay)
-    parser.add_argument("--max_epochs", type=int, default=MLP_DEFAULTS.max_epochs)
-    parser.add_argument("--early_patience", type=int, default=MLP_DEFAULTS.early_patience)
-    parser.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
-
-    # Split
-    parser.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
-
-    # Classification builder knobs
-    parser.add_argument("--n_segments_min", type=int, default=2)
-    parser.add_argument("--n_segments_max", type=int, default=5)
-    parser.add_argument("--min_len_frac", type=float, default=0.05)
-
-    args = parser.parse_args()
+    p = create_common_parser(
+        "MLP — classification",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    attach_additional_args(p, AlgoKind.MLP,
+        hidden=MLP_DEFAULTS.hidden,
+        dropout=MLP_DEFAULTS.dropout,
+        batch_size=MLP_DEFAULTS.batch_size,
+        lr=MLP_DEFAULTS.lr,
+        weight_decay=MLP_DEFAULTS.weight_decay,
+        max_epochs=MLP_DEFAULTS.max_epochs,
+        early_patience=MLP_DEFAULTS.early_patience,
+    )
+    args = p.parse_args()
 
     results = train_and_eval_mlp(
         data_dir=args.data_dir,
@@ -219,5 +215,4 @@ if __name__ == "__main__":
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,
     )
-
     print(json.dumps(results, indent=2))

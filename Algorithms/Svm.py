@@ -17,13 +17,15 @@ from sklearn.pipeline import make_pipeline
 
 from utils.constants import (
     DATA_DIR, MODELS_DIR, CLS_FEATURE_COLS,
-    METER_ID_COL, LEAK_FLAG_COL,
+    METER_ID_COL, LEAK_FLAG_COL, TEST_SIZE_DEFAULT, RANDOM_SEED_DEFAULT
 )
 from utils.DataAggregation import (
     build_aggregated_dataset,
     time_based_group_split,
     scale_on_train,
 )
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
+
 
 # ----------------------------
 # Helpers
@@ -143,24 +145,23 @@ def train_and_eval_svm(
 # CLI
 # ----------------------------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SVM for Leak Detection — Classification or Forecasting.")
-    parser.add_argument("--data_dir", type=str, default=str(DATA_DIR))
-
-    # TASK & common SVM
-    parser.add_argument("--kernel", type=str, default="linear", choices=["linear", "rbf", "rbf_approx"])
-    parser.add_argument("--C", type=float, default=1.0)
-    parser.add_argument("--gamma", type=str, default="scale")
-    parser.add_argument("--cache_size", type=int, default=200)
-    parser.add_argument("--max_iter", type=int, default=30000)
-
-    # dataset builder knobs (shared)
-    parser.add_argument("--n_segments_min", type=int, default=2)
-    parser.add_argument("--n_segments_max", type=int, default=5)
-    parser.add_argument("--min_len_frac", type=float, default=0.05)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--test_size", type=float, default=0.30)
-
-    args = parser.parse_args()
+    p = create_common_parser(
+        "SVM for Leak Detection — Classification.",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    attach_additional_args(p, AlgoKind.SVM,
+        kernel="linear",
+        C=1.0,
+        gamma="scale",
+        cache_size=200,
+        max_iter=30000,
+    )
+    args = p.parse_args()
 
     results = train_and_eval_svm(
         data_dir=Path(args.data_dir),

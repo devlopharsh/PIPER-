@@ -24,6 +24,8 @@ from utils.DataAggregation import (
 )
 
 from utils.CvkFold import _make_group_forward_time_folds, _choose_threshold_fbeta
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
+
 # -----------------------------
 # Feature helpers
 # -----------------------------
@@ -171,37 +173,32 @@ def train_and_eval_random_forest(
 
 
 # ---------------- CLI ----------------
-def int_or_none(v: str) -> int | None:
+def _int_or_none(v: str) -> int | None:
     return None if v.lower() == "none" else int(v)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RandomForest — classification or forecasting")
-    parser.add_argument("--data_dir", type=Path, default=DATA_DIR)
+    p = create_common_parser(
+        "RandomForest — classification",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    # include test_fraction here via defaults so it’s added by ParserCreator
+    attach_additional_args(p, AlgoKind.RF,
+        n_estimators=300,
+        max_depth="None",
+        min_samples_leaf=1,
+        random_state=RANDOM_SEED_DEFAULT,
+        class_weight="balanced_subsample",
+        max_features="sqrt",
+        test_fraction=0.30,
+    )
+    args = p.parse_args()
 
-    # RF hparams
-    parser.add_argument("--n_estimators", type=int, default=300)
-    parser.add_argument("--max_depth", type=str, default="None")  # int or 'None'
-    parser.add_argument("--min_samples_leaf", type=int, default=1)
-    parser.add_argument("--random_state", type=int, default=RANDOM_SEED_DEFAULT)
-
-    # cls-only
-    parser.add_argument("--class_weight", type=str, default="balanced_subsample")
-    parser.add_argument("--max_features", type=str, default="sqrt")  # int/float/sqrt/log2
-
-    # split
-    parser.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
-
-    # classification builder knobs
-    parser.add_argument("--test_fraction", type=float, default=0.30)
-    parser.add_argument("--n_segments_min", type=int, default=2)
-    parser.add_argument("--n_segments_max", type=int, default=5)
-    parser.add_argument("--min_len_frac", type=float, default=0.05)
-
-    args = parser.parse_args()
-
-    # parse rolling_windows and max_depth / max_features
-    md = int_or_none(args.max_depth)
-
+    md = _int_or_none(args.max_depth)
     # try to parse max_features numeric if provided
     if args.max_features.replace(".", "", 1).isdigit():
         mf: str | int | float = float(args.max_features) if "." in args.max_features else int(args.max_features)
@@ -214,7 +211,7 @@ if __name__ == "__main__":
         max_depth=md,
         min_samples_leaf=args.min_samples_leaf,
         random_state=args.random_state,
-        class_weight=None if args.class_weight.lower() == "none" else args.class_weight,
+        class_weight=None if (isinstance(args.class_weight, str) and args.class_weight.lower() == "none") else args.class_weight,
         max_features=mf,
         test_size=args.test_size,
         test_fraction=args.test_fraction,
@@ -222,5 +219,4 @@ if __name__ == "__main__":
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,
     )
-
     print(json.dumps(results, indent=2))

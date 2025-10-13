@@ -27,6 +27,7 @@ from utils.DataAggregation import (
     time_based_group_split,
     scale_on_train,
 )
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
 
 #region LSTM Model
 class LSTMHead(nn.Module):
@@ -170,33 +171,25 @@ def train_and_eval_lstm(
 
 #region CLI
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="LSTM for leak detection — Classification.")
-    p.add_argument("--data_dir", type=str, default=str(DATA_DIR))
-
-    # Shared hyperparameters:
-    # - window: sequence length (also lags in forecast mode)
-    # - stride: how far we move the window each step (classification only)
-    p.add_argument("--window", type=int, default=LSTM_DEFAULTS.window)
-    p.add_argument("--stride", type=int, default=LSTM_DEFAULTS.stride)
-    p.add_argument("--hidden", type=int, default=LSTM_DEFAULTS.hidden)
-    p.add_argument("--num_layers", type=int, default=LSTM_DEFAULTS.num_layers)
-    p.add_argument("--bidirectional", action="store_true", default=LSTM_DEFAULTS.bidirectional)
-    p.add_argument("--dropout", type=float, default=LSTM_DEFAULTS.dropout)
-    p.add_argument("--batch_size", type=int, default=LSTM_DEFAULTS.batch_size)
-    p.add_argument("--lr", type=float, default=LSTM_DEFAULTS.lr)
-    p.add_argument("--weight_decay", type=float, default=LSTM_DEFAULTS.weight_decay)
-    p.add_argument("--max_epochs", type=int, default=LSTM_DEFAULTS.max_epochs)
-    p.add_argument("--early_patience", type=int, default=LSTM_DEFAULTS.early_patience)
-    p.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
-    p.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
-
-    # Classification knobs (affect how synthetic leaks are injected):
-    p.add_argument("--n_segments_min", type=int, default=2)
-    p.add_argument("--n_segments_max", type=int, default=5)
-    p.add_argument("--min_len_frac", type=float, default=0.05)
-
+    p = create_common_parser(
+        "LSTM for leak detection — Classification.",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    attach_additional_args(p, AlgoKind.LSTM,
+        window=LSTM_DEFAULTS.window, stride=LSTM_DEFAULTS.stride,
+        hidden=LSTM_DEFAULTS.hidden, num_layers=LSTM_DEFAULTS.num_layers,
+        bidirectional=LSTM_DEFAULTS.bidirectional, dropout=LSTM_DEFAULTS.dropout,
+        batch_size=LSTM_DEFAULTS.batch_size, lr=LSTM_DEFAULTS.lr,
+        weight_decay=LSTM_DEFAULTS.weight_decay, max_epochs=LSTM_DEFAULTS.max_epochs,
+        early_patience=LSTM_DEFAULTS.early_patience,
+    )
     args = p.parse_args()
-    
+
     res = train_and_eval_lstm(
         data_dir=Path(args.data_dir),
         window=args.window,

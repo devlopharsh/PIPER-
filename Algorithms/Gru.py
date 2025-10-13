@@ -28,6 +28,8 @@ from utils.DataAggregation import (
 )
 from utils.CvkFold import SeqDatasetCls, get_cv_threshold_on_train
 import json
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
+
 
 class GRUHead(nn.Module):
     """
@@ -207,31 +209,24 @@ def train_and_eval_gru(
 # CLI
 # =========================
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="PyTorch GRU — classification or forecasting")
-
-    ap.add_argument("--data_dir", type=Path, default=Path(str(DATA_DIR)))
-
-    # --- shared RNN hyperparams (align with train_and_eval_gru signature) ---
-    ap.add_argument("--window", type=int, default=GRU_DEFAULTS.window)
-    ap.add_argument("--stride", type=int, default=GRU_DEFAULTS.stride)
-    ap.add_argument("--hidden", type=int, default=GRU_DEFAULTS.hidden)
-    ap.add_argument("--num_layers", type=int, default=GRU_DEFAULTS.num_layers)
-    ap.add_argument("--bidirectional", action="store_true", default=GRU_DEFAULTS.bidirectional)
-    ap.add_argument("--dropout", type=float, default=GRU_DEFAULTS.dropout)
-    ap.add_argument("--batch_size", type=int, default=GRU_DEFAULTS.batch_size)
-    ap.add_argument("--lr", type=float, default=GRU_DEFAULTS.lr)
-    ap.add_argument("--weight_decay", type=float, default=GRU_DEFAULTS.weight_decay)
-    ap.add_argument("--max_epochs", type=int, default=GRU_DEFAULTS.max_epochs)
-    ap.add_argument("--early_patience", type=int, default=GRU_DEFAULTS.early_patience)
-    ap.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
-    ap.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
-
-    # --- classification data knobs ---
-    ap.add_argument("--n_segments_min", type=int, default=2)
-    ap.add_argument("--n_segments_max", type=int, default=5)
-    ap.add_argument("--min_len_frac", type=float, default=0.05)
-
-    args = ap.parse_args()
+    p = create_common_parser(
+        "PyTorch GRU — classification",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    attach_additional_args(p, AlgoKind.GRU,
+        window=GRU_DEFAULTS.window, stride=GRU_DEFAULTS.stride,
+        hidden=GRU_DEFAULTS.hidden, num_layers=GRU_DEFAULTS.num_layers,
+        bidirectional=GRU_DEFAULTS.bidirectional, dropout=GRU_DEFAULTS.dropout,
+        batch_size=GRU_DEFAULTS.batch_size, lr=GRU_DEFAULTS.lr,
+        weight_decay=GRU_DEFAULTS.weight_decay, max_epochs=GRU_DEFAULTS.max_epochs,
+        early_patience=GRU_DEFAULTS.early_patience,
+    )
+    args = p.parse_args()
 
     results = train_and_eval_gru(
         data_dir=args.data_dir,
@@ -252,6 +247,4 @@ if __name__ == "__main__":
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,
     )
-
     print(results)
-

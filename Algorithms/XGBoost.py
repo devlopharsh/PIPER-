@@ -26,6 +26,7 @@ from utils.DataAggregation import (
     time_based_group_split,
 )
 from utils.CvkFold import _make_group_forward_time_folds, _choose_threshold_fbeta
+from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
 
 
 # -----------------------------
@@ -106,7 +107,6 @@ def train_and_eval_xgboost(
     use_gpu: bool = False,
     # Split / dataset knobs
     test_size: float = TEST_SIZE_DEFAULT,
-    test_fraction: float = 0.30,
     n_segments_min: int = 1,
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
@@ -115,7 +115,7 @@ def train_and_eval_xgboost(
     df = build_aggregated_dataset(
         data_dir=data_dir,
         leak_mode="variable",
-        test_fraction=test_fraction,
+        test_fraction=test_size,
         n_segments_range=(n_segments_min, n_segments_max),
         min_len_frac=min_len_frac,
     )
@@ -228,28 +228,33 @@ def float_or_str(v: str) -> float | str:
         return v
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="XGBoost — leak classification")
-    parser.add_argument("--data_dir", type=Path, default=DATA_DIR)
-    parser.add_argument("--n_estimators", type=int, default=1500)
-    parser.add_argument("--learning_rate", type=float, default=0.05)
-    parser.add_argument("--max_depth", type=int, default=6)
-    parser.add_argument("--min_child_weight", type=float, default=1.0)
-    parser.add_argument("--subsample", type=float, default=0.8)
-    parser.add_argument("--colsample_bytree", type=float, default=0.8)
-    parser.add_argument("--reg_lambda", type=float, default=1.0)
-    parser.add_argument("--reg_alpha", type=float, default=0.0)
-    parser.add_argument("--gamma", type=float, default=0.0)
-    parser.add_argument("--scale_pos_weight", type=float_or_str, default="auto")
-    parser.add_argument("--early_stopping_rounds", type=int, default=50)
-    parser.add_argument("--random_state", type=int, default=RANDOM_SEED_DEFAULT)
-    parser.add_argument("--use_gpu", action="store_true")
-    parser.add_argument("--test_size", type=float, default=TEST_SIZE_DEFAULT)
-    parser.add_argument("--test_fraction", type=float, default=0.30)
-    parser.add_argument("--n_segments_min", type=int, default=2)
-    parser.add_argument("--n_segments_max", type=int, default=5)
-    parser.add_argument("--min_len_frac", type=float, default=0.05)
+    p = create_common_parser(
+        "XGBoost — leak classification",
+        data_dir_default=DATA_DIR,
+        test_size_default=TEST_SIZE_DEFAULT,
+        seed_default=RANDOM_SEED_DEFAULT,
+        n_segments_min_default=2,
+        n_segments_max_default=5,
+        min_len_frac_default=0.05,
+    )
+    attach_additional_args(p, AlgoKind.XGB,
+        n_estimators=1500,
+        learning_rate=0.05,
+        max_depth=6,
+        min_child_weight=1.0,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        reg_lambda=1.0,
+        reg_alpha=0.0,
+        gamma=0.0,
+        scale_pos_weight="auto",
+        early_stopping_rounds=50,
+        random_state=RANDOM_SEED_DEFAULT,
+        use_gpu=False,
+    )
 
-    args = parser.parse_args()
+    args = p.parse_args()
+
     results = train_and_eval_xgboost(
         data_dir=args.data_dir,
         n_estimators=args.n_estimators,
@@ -265,8 +270,7 @@ if __name__ == "__main__":
         early_stopping_rounds=args.early_stopping_rounds,
         random_state=args.random_state,
         use_gpu=args.use_gpu,
-        test_size=args.test_size,
-        test_fraction=args.test_fraction,
+        test_size=args.test_size,      
         n_segments_min=args.n_segments_min,
         n_segments_max=args.n_segments_max,
         min_len_frac=args.min_len_frac,
