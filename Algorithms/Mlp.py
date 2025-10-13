@@ -52,14 +52,14 @@ class MLP(nn.Module):
 def train_and_eval_mlp(
     data_dir: Path,
     # Architecture
-    hidden: List[int] = tuple(MLP_DEFAULTS["hidden"]),
-    dropout: float = MLP_DEFAULTS["dropout"],
+    hidden: List[int] = tuple(MLP_DEFAULTS.hidden),
+    dropout: float = MLP_DEFAULTS.dropout,
     # Optimization
-    batch_size: int = MLP_DEFAULTS["batch_size"],
-    lr: float = MLP_DEFAULTS["lr"],
-    weight_decay: float = MLP_DEFAULTS["weight_decay"],
-    max_epochs: int = MLP_DEFAULTS["max_epochs"],
-    early_patience: int = MLP_DEFAULTS["early_patience"],
+    batch_size: int = MLP_DEFAULTS.batch_size,
+    lr: float = MLP_DEFAULTS.lr,
+    weight_decay: float = MLP_DEFAULTS.weight_decay,
+    max_epochs: int = MLP_DEFAULTS.max_epochs,
+    early_patience: int = MLP_DEFAULTS.early_patience,
     seed: int = RANDOM_SEED_DEFAULT,
     # Split
     test_size: float = TEST_SIZE_DEFAULT,
@@ -183,15 +183,15 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=Path, default=str(DATA_DIR))
 
     # Arch
-    parser.add_argument("--hidden", nargs="+", type=int, default=MLP_DEFAULTS["hidden"])
-    parser.add_argument("--dropout", type=float, default=MLP_DEFAULTS["dropout"])
+    parser.add_argument("--hidden", nargs="+", type=int, default=MLP_DEFAULTS.hidden)
+    parser.add_argument("--dropout", type=float, default=MLP_DEFAULTS.dropout)
 
     # Opt
-    parser.add_argument("--batch_size", type=int, default=MLP_DEFAULTS["batch_size"])
-    parser.add_argument("--lr", type=float, default=MLP_DEFAULTS["lr"])
-    parser.add_argument("--weight_decay", type=float, default=MLP_DEFAULTS["weight_decay"])
-    parser.add_argument("--max_epochs", type=int, default=MLP_DEFAULTS["max_epochs"])
-    parser.add_argument("--early_patience", type=int, default=MLP_DEFAULTS["early_patience"])
+    parser.add_argument("--batch_size", type=int, default=MLP_DEFAULTS.batch_size)
+    parser.add_argument("--lr", type=float, default=MLP_DEFAULTS.lr)
+    parser.add_argument("--weight_decay", type=float, default=MLP_DEFAULTS.weight_decay)
+    parser.add_argument("--max_epochs", type=int, default=MLP_DEFAULTS.max_epochs)
+    parser.add_argument("--early_patience", type=int, default=MLP_DEFAULTS.early_patience)
     parser.add_argument("--seed", type=int, default=RANDOM_SEED_DEFAULT)
 
     # Split

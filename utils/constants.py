@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import torch
 from pathlib import Path
+from typing import Tuple
 
 # Root data folder
 DATA_DIR = Path("./LeakageData")
@@ -21,7 +22,6 @@ VOLUME_COL        = "Volume"
 VOLUME_READING_COL= "Volume_Reading"
 DELTA_VOLUME_COL  = "Delta_Volume"
 LEAK_FLAG_COL     = "Leak_Flag"
-FORECAST_Y_COL    = "y"             # target used by forecasting builders
 
 # Calendar feature set
 CALENDAR_COLS = ["Hour", "DayOfWeek", "Month"]
@@ -38,25 +38,24 @@ CLS_FEATURE_COLS = [*CALENDAR_COLS, *ROLLING_COLS, DELTA_VOLUME_COL]
 # --------------------
 RANDOM_SEED_DEFAULT          = 42
 TEST_SIZE_DEFAULT            = 0.30
-VAL_FRACTION_DEFAULT         = 0.10
-
-LEAK_FRACTION_DEFAULT        = 0.15
-SEGMENTS_RANGE_DEFAULT       = (1, 3)
+SEGMENTS_RANGE_DEFAULT       = (2, 5)
 MIN_LEN_FRAC_DEFAULT         = 0.05
 
-# --------------------
-# Model-specific sane defaults
-# --------------------
+
+#region Model-specific defaults
+
 # MLP
-MLP_DEFAULTS = dict(
-    hidden=[128, 64],
-    dropout=0.2,
-    batch_size=256,
-    lr=1e-3,
-    weight_decay=1e-5,
-    max_epochs=10,
-    early_patience=4,
-)
+@dataclass(frozen=True)
+class MLPDefaults:
+    hidden: Tuple[int, ...] = (128, 64)
+    dropout: float = 0.2
+    batch_size: int = 256
+    lr: float =1e-3
+    weight_decay: float = 1e-5
+    max_epochs: int = 10
+    early_patience: int = 4
+
+MLP_DEFAULTS = MLPDefaults()
 
 # LSTM
 @dataclass(frozen=True)
@@ -91,3 +90,5 @@ class GRUDefaults:
     early_patience: int = 4
 
 GRU_DEFAULTS = GRUDefaults()
+
+#endregion
