@@ -106,8 +106,6 @@ def attach_additional_args(
         parser.add_argument("--random_state", type=int, default=int(defaults.get("random_state", defaults.get("seed", 42))))
         parser.add_argument("--class_weight", type=str, default=str(defaults.get("class_weight", "balanced_subsample")))
         parser.add_argument("--max_features", type=str, default=str(defaults.get("max_features", "sqrt")))
-        if "test_fraction" in defaults:
-            parser.add_argument("--test_fraction", type=float, default=float(defaults["test_fraction"]))
         return
 
     # ---------- SVM ----------

@@ -8,12 +8,12 @@ import joblib
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.metrics import average_precision_score, fbeta_score
 from scipy.special import expit
 
 from sklearn.metrics import (
     accuracy_score, f1_score, precision_score, recall_score,
     classification_report, confusion_matrix,
+    average_precision_score, fbeta_score,
 )
 
 from utils.constants import (
@@ -21,10 +21,9 @@ from utils.constants import (
     METER_ID_COL, LEAK_FLAG_COL,
     CLS_FEATURE_COLS, MLP_DEFAULTS,
     RANDOM_SEED_DEFAULT, TEST_SIZE_DEFAULT,
-    DEVICE
+    DEVICE,
 )
 from utils.CvkFold import get_cv_threshold_on_train
-
 from utils.DataAggregation import (
     build_aggregated_dataset,
     time_based_group_split,
@@ -35,6 +34,7 @@ from utils.ParserCreator import create_common_parser, attach_additional_args, Al
 
 # ----------------------------- Model -----------------------------
 class MLP(nn.Module):
+    """Plain feed-forward network for tabular binary classification."""
     def __init__(self, in_dim: int, hidden: List[int] = (128, 64), p_drop: float = 0.2):
         super().__init__()
         layers: List[nn.Module] = []
@@ -42,10 +42,10 @@ class MLP(nn.Module):
         for h in hidden:
             layers += [nn.Linear(prev, h), nn.ReLU(), nn.Dropout(p_drop)]
             prev = h
-        layers += [nn.Linear(prev, 1)]  # binary logit (cls) or scalar (reg)
+        layers += [nn.Linear(prev, 1)]  # output logit
         self.net = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x).squeeze(-1)
 
 
@@ -60,19 +60,18 @@ def train_and_eval_mlp(
     lr: float = MLP_DEFAULTS.lr,
     weight_decay: float = MLP_DEFAULTS.weight_decay,
     max_epochs: int = MLP_DEFAULTS.max_epochs,
-    early_patience: int = MLP_DEFAULTS.early_patience,
+    early_patience: int = MLP_DEFAULTS.early_patience,  # used only inside CV helper
     seed: int = RANDOM_SEED_DEFAULT,
     # Split
     test_size: float = TEST_SIZE_DEFAULT,
-    # Classification data knobs
+    # Synthetic leak knobs
     n_segments_min: int = 1,
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
 ):
     torch.manual_seed(seed); np.random.seed(seed)
 
-    # ------------------------- BUILD DATA -------------------------
-    # Build classification frame with synthetic persistent leaks
+    # 1) Build dataset with synthetic persistent leaks
     df = build_aggregated_dataset(
         data_dir=data_dir,
         test_fraction=test_size,
@@ -80,13 +79,13 @@ def train_and_eval_mlp(
         min_len_frac=min_len_frac,
     )
 
-    # Time split per meter → train/test; then train_core/val
+    # 2) Time-aware per-meter split (head→train, tail→test)
     train_df, test_df = time_based_group_split(df, test_size=test_size, group_cols=[METER_ID_COL])
 
-    # Feature set (classification)
+    # 3) Feature list present in the frame
     feat_cols = [c for c in CLS_FEATURE_COLS if c in train_df.columns]
 
-    # === Inner CV on TRAIN: robust threshold (tabular mode) ===
+    # 4) Inner CV on TRAIN to get a robust probability threshold
     cv_thr, cv_thr_list = get_cv_threshold_on_train(
         df_train=train_df,
         feature_cols=feat_cols,
@@ -99,22 +98,23 @@ def train_and_eval_mlp(
     )
     print(f"[CV] thresholds={np.round(cv_thr_list,3).tolist()} → robust_thr={cv_thr:.3f}")
 
-    # Scale στο FULL TRAIN
+    # 5) Scale on FULL TRAIN; transform TEST with the same scaler
     tr_scaled, _dummy, scaler = scale_on_train(train_df, train_df, feat_cols)
-    te_scaled  = test_df.copy(); te_scaled[feat_cols]  = scaler.transform(te_scaled[feat_cols])
+    te_scaled = test_df.copy()
+    te_scaled[feat_cols] = scaler.transform(te_scaled[feat_cols])
 
-    # Dataloaders για final train/test
+    # 6) Build loaders
     Xtr = tr_scaled[feat_cols].to_numpy(np.float32)
     ytr = tr_scaled[LEAK_FLAG_COL].to_numpy(np.float32)
     Xte = te_scaled[feat_cols].to_numpy(np.float32)
     yte = te_scaled[LEAK_FLAG_COL].to_numpy(np.float32)
 
     train_loader = DataLoader(TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr)),
-                            batch_size=batch_size, shuffle=True,  num_workers=0)
+                              batch_size=batch_size, shuffle=True, num_workers=0)
     test_loader  = DataLoader(TensorDataset(torch.from_numpy(Xte), torch.from_numpy(yte)),
-                            batch_size=batch_size, shuffle=False, num_workers=0)
+                              batch_size=batch_size, shuffle=False, num_workers=0)
 
-    # Model / loss
+    # 7) Model + imbalance-aware loss
     in_dim = Xtr.shape[1]
     model = MLP(in_dim=in_dim, hidden=list(hidden), p_drop=dropout).to(DEVICE)
     pos = float(ytr.sum())
@@ -122,20 +122,20 @@ def train_and_eval_mlp(
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight], dtype=torch.float32, device=DEVICE))
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # Final train σε FULL TRAIN (χωρίς early stop εδώ — το threshold το έχουμε από CV)
-    for ep in range(1, max_epochs + 1):
+    # 8) Final train on FULL TRAIN (threshold already chosen via CV)
+    for _ in range(max_epochs):
         model.train()
         for xb, yb in train_loader:
             xb = xb.to(DEVICE); yb = yb.to(DEVICE)
             loss = criterion(model(xb), yb)
             optim.zero_grad(); loss.backward(); optim.step()
 
-    # Save
+    # Save weights + scaler
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), MODELS_DIR / "mlp_cls.pt")
     joblib.dump(scaler, MODELS_DIR / "mlp_cls_scaler.joblib")
 
-    # ---- Test ----
+    # 9) Test: get probabilities and apply CV threshold
     model.load_state_dict(torch.load(MODELS_DIR / "mlp_cls.pt", map_location=DEVICE))
     model.eval()
     with torch.no_grad():
@@ -147,10 +147,9 @@ def train_and_eval_mlp(
     y_scores = np.concatenate(logits).ravel()
     y_true   = np.concatenate(ys).ravel()
     y_probs  = expit(np.clip(y_scores, -20, 20))
+    y_pred   = (y_probs >= cv_thr).astype(int)
 
-    best_thr = cv_thr
-    y_pred   = (y_probs >= best_thr).astype(int)
-
+    # 10) Metrics
     acc  = float(accuracy_score(y_true, y_pred))
     f1b  = float(f1_score(y_true, y_pred, average="binary"))
     prec = float(precision_score(y_true, y_pred, zero_division=0))
@@ -170,11 +169,10 @@ def train_and_eval_mlp(
         "ap": ap,
         "cm": cm,
         "report": report,
-        "thr": best_thr,
+        "thr": float(cv_thr),
         "model_path": str(MODELS_DIR / "mlp_cls.pt"),
         "scaler_path": str(MODELS_DIR / "mlp_cls_scaler.joblib"),
     }
-
 
 
 # ----------------------------- CLI -----------------------------
