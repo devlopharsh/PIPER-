@@ -42,7 +42,11 @@ def load_and_merge(csv_paths: List[Path]) -> pd.DataFrame:
     for p in csv_paths:
         df = pd.read_csv(p)
         df[METER_ID_COL] = df[METER_ID_COL].astype(str)
-        df[TIMESTAMP_COL] = pd.to_datetime(df[TIMESTAMP_COL])
+        df[TIMESTAMP_COL] = pd.to_datetime(
+    df[TIMESTAMP_COL].astype(str).str.strip(),
+    format="%d/%m/%Y %H:%M",
+    dayfirst=True,
+)
         dfs.append(df)
 
     data = pd.concat(dfs, ignore_index=True)
