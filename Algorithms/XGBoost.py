@@ -27,7 +27,6 @@ from utils.DataAggregation import (
 from utils.CvkFold import _make_group_forward_time_folds, _choose_threshold_fbeta
 from utils.ParserCreator import create_common_parser, attach_additional_args, AlgoKind
 
-
 # -----------------------------
 # Feature helpers
 # -----------------------------
@@ -245,19 +244,19 @@ if __name__ == "__main__":
         min_len_frac_default=0.05,
     )
     attach_additional_args(p, AlgoKind.XGB,
-        n_estimators=1500,
+        n_estimators=1400,
         learning_rate=0.05,
-        max_depth=6,
-        min_child_weight=1.0,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        reg_lambda=1.0,
-        reg_alpha=0.0,
-        gamma=0.0,
+        max_depth=3,
+        min_child_weight=9.742,
+        subsample=0.975,
+        colsample_bytree=0.81,
+        reg_lambda=7.4,
+        reg_alpha=1.307,
+        gamma=4.341,
         scale_pos_weight="auto",
         early_stopping_rounds=50,
         random_state=RANDOM_SEED_DEFAULT,
-        use_gpu=False,
+        use_gpu=True,
     )
 
     args = p.parse_args()

@@ -62,12 +62,12 @@ MLP_DEFAULTS = MLPDefaults()
 class LSTMDefaults:
     window: int = 2*24
     stride: int = 1
-    hidden: int = 64
+    hidden: int = 96
     num_layers: int = 2
     bidirectional: bool = False
     batch_size: int = 256
     max_epochs: int = 10
-    dropout: float = 0.2
+    dropout: float = 0.36
     lr: float = 1e-3
     weight_decay: float = 1e-5
     early_patience: int = 4

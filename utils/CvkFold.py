@@ -181,11 +181,6 @@ def get_cv_threshold_on_train(
     Run forward-chaining K-fold CV **only on the training split** to obtain
     a robust decision threshold (median across folds).
 
-    Why only on train?
-      - You typically want to "lock" the threshold using *only* training data,
-        to avoid peeking at test. Later, you apply that fixed threshold to the
-        test (or production).
-
     Returns:
         (robust_thr, per_fold_thresholds)
         - robust_thr: median of thresholds across folds

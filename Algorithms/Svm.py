@@ -44,7 +44,6 @@ def train_and_eval_svm(
     gamma: str | float = "scale",
     cache_size: int = 200,
     max_iter: int = 10000,
-    max_train_samples: int | None = None,
     n_segments_min: int = 1,
     n_segments_max: int = 3,
     min_len_frac: float = 0.05,
@@ -71,11 +70,6 @@ def train_and_eval_svm(
     train_df_scaled, test_df_scaled, scaler = scale_on_train(train_df, test_df, feature_cols)
     X_train, y_train = prepare_Xy(train_df_scaled, feature_cols)
     X_test,  y_test  = prepare_Xy(test_df_scaled,  feature_cols)
-
-    # (Optional) subsample train for speed
-    if max_train_samples is not None and len(X_train) > max_train_samples:
-        idx = np.random.permutation(len(X_train))[:max_train_samples]
-        X_train, y_train = X_train[idx], y_train[idx]
 
     # 5) Choose model
     if kernel == "linear":
