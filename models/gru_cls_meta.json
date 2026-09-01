@@ -1,0 +1,23 @@
+{
+  "model": "GRUHead",
+  "task": "cls",
+  "thr": 0.6798978447914124,
+  "window": 48,
+  "stride": 1,
+  "in_dim": 9,
+  "feature_cols": [
+    "Hour",
+    "DayOfWeek",
+    "Month",
+    "roll6_mean",
+    "roll24_mean",
+    "roll6_std",
+    "roll24_std",
+    "rel_to_roll24",
+    "Delta_Volume"
+  ],
+  "hidden": 64,
+  "num_layers": 2,
+  "bidirectional": false,
+  "dropout": 0.2
+}
