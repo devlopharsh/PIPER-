@@ -1,0 +1,129 @@
+{
+  "dataset_name": "SCADA_Pipeline",
+  "source_path": "data\\raw\\scada_pipeline.csv",
+  "format": "csv",
+  "n_files": 1,
+  "total_rows": 1000,
+  "columns": [
+    "timestamp",
+    "segment_id",
+    "pressure",
+    "flow_rate",
+    "temperature",
+    "valve_status",
+    "pump_state",
+    "pump_speed",
+    "compressor_state",
+    "energy_consumption",
+    "alarm_triggered",
+    "event_type",
+    "target",
+    "timestamp_parsed"
+  ],
+  "date_range": [
+    "2024-01-01 00:00:00",
+    "2024-01-01 00:16:00"
+  ],
+  "sensors": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50
+  ],
+  "validation_report": {
+    "dataset": "SCADA_Pipeline",
+    "description": "SCADA pipeline dataset with pressure, flow_rate, temperature (3 primary telemetry). Vibration not required for current tabular classification scope. Pipeline_id is MISSING (single pipeline assumed). Target column is real ground truth. segment_id maps to sensor_id.",
+    "all_required_mapped": true,
+    "primary_telemetry": {
+      "pressure": {
+        "mapped": true,
+        "source_column": "pressure",
+        "status": "MAPPED"
+      },
+      "flow_rate": {
+        "mapped": true,
+        "source_column": "flow_rate",
+        "status": "MAPPED"
+      },
+      "temperature": {
+        "mapped": true,
+        "source_column": "temperature",
+        "status": "MAPPED"
+      }
+    },
+    "metadata": {
+      "pipeline_id": {
+        "mapped": false,
+        "source_column": null,
+        "status": "MISSING - OPTIONAL"
+      },
+      "sensor_id": {
+        "mapped": true,
+        "source_column": "segment_id",
+        "status": "MAPPED"
+      },
+      "timestamp": {
+        "mapped": true,
+        "source_column": "timestamp",
+        "status": "MAPPED"
+      }
+    },
+    "target": {
+      "label": {
+        "mapped": true,
+        "source_column": "target",
+        "status": "MAPPED"
+      }
+    },
+    "missing_canonical_columns": [
+      "pipeline_id"
+    ],
+    "blockers": []
+  }
+}

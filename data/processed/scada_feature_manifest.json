@@ -1,0 +1,307 @@
+{
+  "dataset_name": "SCADA_Pipeline",
+  "generated_at": "2026-10-10T22:29:47.046251",
+  "features": {
+    "timestamp": {
+      "type": "metadata",
+      "derivation": "Identifier/timestamp column",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "datetime64[ns]",
+      "n_unique": 17,
+      "missing_pct": 0.0
+    },
+    "sensor_id": {
+      "type": "metadata",
+      "derivation": "Identifier/timestamp column",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 50,
+      "missing_pct": 0.0
+    },
+    "pressure": {
+      "type": "primary_telemetry",
+      "derivation": "Direct sensor measurement (no transformation)",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 833,
+      "missing_pct": 0.0
+    },
+    "flow_rate": {
+      "type": "primary_telemetry",
+      "derivation": "Direct sensor measurement (no transformation)",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 312,
+      "missing_pct": 0.0
+    },
+    "temperature": {
+      "type": "primary_telemetry",
+      "derivation": "Direct sensor measurement (no transformation)",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 553,
+      "missing_pct": 0.0
+    },
+    "valve_status": {
+      "type": "auxiliary",
+      "derivation": "Operational state measurement",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 3,
+      "missing_pct": 0.0
+    },
+    "pump_state": {
+      "type": "auxiliary",
+      "derivation": "Operational state measurement",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 2,
+      "missing_pct": 0.0
+    },
+    "pump_speed": {
+      "type": "auxiliary",
+      "derivation": "Operational state measurement",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 643,
+      "missing_pct": 0.0
+    },
+    "compressor_state": {
+      "type": "auxiliary",
+      "derivation": "Operational state measurement",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 2,
+      "missing_pct": 0.0
+    },
+    "energy_consumption": {
+      "type": "auxiliary",
+      "derivation": "Operational state measurement",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 852,
+      "missing_pct": 0.0
+    },
+    "alarm_triggered": {
+      "type": "auxiliary",
+      "derivation": "Auxiliary operational indicator",
+      "excluded_from_predictive_features": true,
+      "exclusion_reason": "Directly encodes abnormal condition - target leakage risk",
+      "dtype": "int32",
+      "n_unique": 2,
+      "missing_pct": 0.0
+    },
+    "event_type": {
+      "type": "event_metadata",
+      "derivation": "Original event type classification",
+      "excluded_from_predictive_features": true,
+      "exclusion_reason": "Post-event information - would cause target leakage",
+      "dtype": "object",
+      "n_unique": 5,
+      "missing_pct": 0.0
+    },
+    "label": {
+      "type": "target",
+      "derivation": "Ground truth label (0=normal, 1=abnormal)",
+      "excluded_from_predictive_features": true,
+      "exclusion_reason": "Target variable - not a predictive feature",
+      "dtype": "int32",
+      "n_unique": 2,
+      "missing_pct": 0.0
+    },
+    "timestamp_parsed": {
+      "type": "unknown",
+      "derivation": "Unclassified",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "datetime64[ns]",
+      "n_unique": 17,
+      "missing_pct": 0.0
+    },
+    "reading_index": {
+      "type": "unknown",
+      "derivation": "Unclassified",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int64",
+      "n_unique": 7,
+      "missing_pct": 0.0
+    },
+    "hour": {
+      "type": "derived",
+      "derivation": "Derived feature",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "dayofweek": {
+      "type": "derived",
+      "derivation": "Derived feature",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "month": {
+      "type": "derived",
+      "derivation": "Derived feature",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "quarter": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "dayofyear": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "weekofyear": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "UInt32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "is_weekend": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int32",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "sin_hour": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "cos_hour": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "sin_dayofweek": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "cos_dayofweek": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "sin_month": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "cos_month": {
+      "type": "temporal",
+      "derivation": "Extracted from timestamp",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    },
+    "flow_pressure_ratio": {
+      "type": "derived",
+      "derivation": "Pressure-flow relationship feature: flow_pressure_ratio",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "float64",
+      "n_unique": 996,
+      "missing_pct": 0.0
+    },
+    "sensor_id_encoded": {
+      "type": "derived",
+      "derivation": "Integer encoding of sensor_id",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int64",
+      "n_unique": 50,
+      "missing_pct": 0.0
+    },
+    "n_sensors": {
+      "type": "derived",
+      "derivation": "Total number of unique sensors in dataset",
+      "excluded_from_predictive_features": false,
+      "exclusion_reason": null,
+      "dtype": "int64",
+      "n_unique": 1,
+      "missing_pct": 0.0
+    }
+  },
+  "excluded_columns": {},
+  "summary": {
+    "total_features": 31,
+    "by_type": {
+      "metadata": 2,
+      "primary_telemetry": 3,
+      "auxiliary": 6,
+      "event_metadata": 1,
+      "target": 1,
+      "unknown": 2,
+      "derived": 6,
+      "temporal": 10
+    },
+    "predictive_features": 28,
+    "excluded_features": 3,
+    "primary_telemetry_present": [
+      "pressure",
+      "flow_rate",
+      "temperature"
+    ],
+    "primary_telemetry_missing": []
+  }
+}

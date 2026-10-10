@@ -1,0 +1,472 @@
+{
+  "dataset_name": "ApoErch_LeakageData",
+  "total_rows_raw": 270499,
+  "total_rows_clean": 270499,
+  "total_rows_removed": 0,
+  "start_time": "2026-10-10T22:30:37.756356",
+  "end_time": "2026-10-10T22:30:38.533258",
+  "steps": [
+    {
+      "step_name": "validate_timestamps",
+      "description": "Parse and validate timestamps (%Y-%m-%d %H:%M:%S)",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "original_dtype": "datetime64[ns]",
+        "format_used": "%Y-%m-%d %H:%M:%S",
+        "parsing_failures": 0,
+        "rows_with_invalid_timestamp_removed": 0,
+        "timestamp_range": {
+          "min": "2019-02-05 16:00:00",
+          "max": "2023-12-08 10:00:00"
+        }
+      },
+      "timestamp": "2026-10-10T22:30:38.109833"
+    },
+    {
+      "step_name": "enforce_chronological_order",
+      "description": "Sort by sensor_id, then timestamp",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "sort_columns": [
+          "sensor_id",
+          "timestamp"
+        ],
+        "was_already_sorted": true
+      },
+      "timestamp": "2026-10-10T22:30:38.172156"
+    },
+    {
+      "step_name": "handle_duplicates",
+      "description": "Handle duplicates on ['sensor_id', 'timestamp']: exact removed, conflicts preserved",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "subset_columns": [
+          "sensor_id",
+          "timestamp"
+        ],
+        "keep_policy": "first",
+        "exact_duplicate_rows_found": 0,
+        "exact_duplicate_rows_removed": 0,
+        "key_duplicate_groups_found": 0,
+        "conflicting_key_groups": 0,
+        "identical_key_groups": 0,
+        "conflicting_rows_preserved": 0,
+        "reading_index_added": false,
+        "action": "Exact duplicates removed; conflicting key duplicates preserved with reading_index"
+      },
+      "timestamp": "2026-10-10T22:30:38.273066"
+    },
+    {
+      "step_name": "detect_missing_values",
+      "description": "Detect missing values in 3 columns",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "columns_checked": [
+          "flow_rate",
+          "sensor_id",
+          "timestamp"
+        ],
+        "missing_per_column": {
+          "flow_rate": 0,
+          "sensor_id": 0,
+          "timestamp": 0
+        },
+        "total_missing_values": 0,
+        "rows_with_any_missing": 0,
+        "action": "REPORT_ONLY - no rows removed"
+      },
+      "timestamp": "2026-10-10T22:30:38.301642"
+    },
+    {
+      "step_name": "validate_telemetry_numeric",
+      "description": "Validate numeric type for telemetry columns",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "columns_checked": [
+          "flow_rate"
+        ],
+        "non_numeric_per_column": {
+          "flow_rate": 0
+        },
+        "total_non_numeric": 0,
+        "action": "REPORT_ONLY - no conversion performed"
+      },
+      "timestamp": "2026-10-10T22:30:38.308835"
+    },
+    {
+      "step_name": "coerce_telemetry_numeric",
+      "description": "Coerce telemetry columns to numeric (coerce)",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "columns": [
+          "flow_rate"
+        ],
+        "errors_policy": "coerce",
+        "values_coerced_to_nan_per_column": {
+          "flow_rate": 0
+        },
+        "total_coerced": 0,
+        "rows_removed_due_to_nan_telemetry": 0
+      },
+      "timestamp": "2026-10-10T22:30:38.328576"
+    },
+    {
+      "step_name": "detect_impossible_values",
+      "description": "Check physical bounds on telemetry",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "rules_applied": {
+          "pressure": {
+            "min": 0,
+            "max": 2000
+          },
+          "flow_rate": {
+            "min": 0,
+            "max": 50000
+          },
+          "temperature": {
+            "min": -40,
+            "max": 200
+          },
+          "vibration": {
+            "min": 0,
+            "max": 500
+          }
+        },
+        "impossible_per_column": {
+          "flow_rate": 52
+        },
+        "total_impossible_values": 52,
+        "rows_with_any_impossible": 52,
+        "action": "REPORT_ONLY - abnormal values preserved for leak detection"
+      },
+      "timestamp": "2026-10-10T22:30:38.339256"
+    },
+    {
+      "step_name": "inspect_outliers",
+      "description": "Outlier inspection using iqr",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "method": "iqr",
+        "columns_checked": [
+          "flow_rate"
+        ],
+        "outliers_per_column": {
+          "flow_rate": 46274
+        },
+        "total_outliers": 46274,
+        "outlier_details": {
+          "flow_rate": {
+            "method": "iqr",
+            "q1": 0.0,
+            "q3": 100.0,
+            "iqr": 100.0,
+            "lower_bound": -150.0,
+            "upper_bound": 250.0,
+            "multiplier": 1.5
+          }
+        },
+        "action": "REPORT_ONLY - outliers preserved (may indicate leaks)"
+      },
+      "timestamp": "2026-10-10T22:30:38.353367"
+    },
+    {
+      "step_name": "check_sensor_consistency",
+      "description": "Per-sensor consistency check",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "total_sensors": 10,
+        "sensor_statistics": [
+          {
+            "sensor_id": "mblr-2/00037896/volume",
+            "n_readings": 32440,
+            "date_range_start": "2019-02-08 18:00:00",
+            "date_range_end": "2023-12-08 07:00:00",
+            "time_span_hours": 42325.0,
+            "expected_readings_hourly": 42326,
+            "completeness": 0.7664319803430516,
+            "n_gaps_gt_1h": 1886,
+            "max_gap_hours": 1656.0
+          },
+          {
+            "sensor_id": "mblr-2/00037908/volume",
+            "n_readings": 13034,
+            "date_range_start": "2019-02-12 20:00:00",
+            "date_range_end": "2023-12-08 10:00:00",
+            "time_span_hours": 42230.0,
+            "expected_readings_hourly": 42231,
+            "completeness": 0.30863583623404606,
+            "n_gaps_gt_1h": 2115,
+            "max_gap_hours": 1682.0
+          },
+          {
+            "sensor_id": "mblr-2/00038203/volume",
+            "n_readings": 27336,
+            "date_range_start": "2019-02-20 15:00:00",
+            "date_range_end": "2023-12-08 10:00:00",
+            "time_span_hours": 42043.0,
+            "expected_readings_hourly": 42044,
+            "completeness": 0.6501760060888593,
+            "n_gaps_gt_1h": 4018,
+            "max_gap_hours": 1657.0
+          },
+          {
+            "sensor_id": "mblr-2/00038207/volume",
+            "n_readings": 27618,
+            "date_range_start": "2019-02-19 17:00:00",
+            "date_range_end": "2023-12-08 10:00:00",
+            "time_span_hours": 42065.0,
+            "expected_readings_hourly": 42066,
+            "completeness": 0.6565397232919697,
+            "n_gaps_gt_1h": 2617,
+            "max_gap_hours": 1657.0
+          },
+          {
+            "sensor_id": "mblr-2/00038635/volume",
+            "n_readings": 32196,
+            "date_range_start": "2019-02-05 16:00:00",
+            "date_range_end": "2023-12-08 07:00:00",
+            "time_span_hours": 42399.0,
+            "expected_readings_hourly": 42400,
+            "completeness": 0.7593396226415094,
+            "n_gaps_gt_1h": 1685,
+            "max_gap_hours": 1656.0
+          },
+          {
+            "sensor_id": "mblr-2/00082616/volume",
+            "n_readings": 19621,
+            "date_range_start": "2019-02-22 17:00:00",
+            "date_range_end": "2023-12-08 09:00:00",
+            "time_span_hours": 41992.0,
+            "expected_readings_hourly": 41993,
+            "completeness": 0.4672445407567928,
+            "n_gaps_gt_1h": 13712,
+            "max_gap_hours": 1656.0
+          },
+          {
+            "sensor_id": "mblr-2/00082737/volume",
+            "n_readings": 28793,
+            "date_range_start": "2019-02-22 11:00:00",
+            "date_range_end": "2023-12-08 10:00:00",
+            "time_span_hours": 41999.0,
+            "expected_readings_hourly": 42000,
+            "completeness": 0.6855476190476191,
+            "n_gaps_gt_1h": 3834,
+            "max_gap_hours": 1657.0
+          },
+          {
+            "sensor_id": "mblr-2/00082815/volume",
+            "n_readings": 32149,
+            "date_range_start": "2019-02-22 11:00:00",
+            "date_range_end": "2023-12-08 07:00:00",
+            "time_span_hours": 41996.0,
+            "expected_readings_hourly": 41997,
+            "completeness": 0.7655070600280972,
+            "n_gaps_gt_1h": 1805,
+            "max_gap_hours": 1656.0
+          },
+          {
+            "sensor_id": "mblr-2/00082827/volume",
+            "n_readings": 30074,
+            "date_range_start": "2019-02-22 17:00:00",
+            "date_range_end": "2023-12-08 07:00:00",
+            "time_span_hours": 41990.0,
+            "expected_readings_hourly": 41991,
+            "completeness": 0.716201090709914,
+            "n_gaps_gt_1h": 3341,
+            "max_gap_hours": 1656.0
+          },
+          {
+            "sensor_id": "mblr-2/00082840/volume",
+            "n_readings": 27238,
+            "date_range_start": "2019-02-22 19:00:00",
+            "date_range_end": "2023-12-08 10:00:00",
+            "time_span_hours": 41991.0,
+            "expected_readings_hourly": 41992,
+            "completeness": 0.6486473614021718,
+            "n_gaps_gt_1h": 5781,
+            "max_gap_hours": 1656.0
+          }
+        ],
+        "sensors_with_gaps": 10,
+        "sensors_low_completeness": 2,
+        "single_reading_sensors": 0,
+        "action": "REPORT_ONLY"
+      },
+      "timestamp": "2026-10-10T22:30:38.402272"
+    },
+    {
+      "step_name": "check_sampling_interval",
+      "description": "Sampling interval consistency (expected: 1.0h)",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "expected_interval_hours": 1.0,
+        "tolerance_hours": 0.1,
+        "total_intervals_analyzed": 270489,
+        "overall_on_time_pct": 84.9184255182281,
+        "per_sensor_statistics": [
+          {
+            "sensor_id": "mblr-2/00037896/volume",
+            "n_intervals": 32439,
+            "mean_interval_hours": 1.3047566201177594,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 12.821149417020267,
+            "on_time_count": 30553,
+            "early_count": 0,
+            "late_count": 1886,
+            "on_time_pct": 94.18601066617343
+          },
+          {
+            "sensor_id": "mblr-2/00037908/volume",
+            "n_intervals": 13033,
+            "mean_interval_hours": 3.240236323179621,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 27.452711755957516,
+            "on_time_count": 10918,
+            "early_count": 0,
+            "late_count": 2115,
+            "on_time_pct": 83.77196347732678
+          },
+          {
+            "sensor_id": "mblr-2/00038203/volume",
+            "n_intervals": 27335,
+            "mean_interval_hours": 1.5380647521492592,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 15.461089768600186,
+            "on_time_count": 23317,
+            "early_count": 0,
+            "late_count": 4018,
+            "on_time_pct": 85.30089628681178
+          },
+          {
+            "sensor_id": "mblr-2/00038207/volume",
+            "n_intervals": 27617,
+            "mean_interval_hours": 1.5231560270847666,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 14.987494112899856,
+            "on_time_count": 25000,
+            "early_count": 0,
+            "late_count": 2617,
+            "on_time_pct": 90.52395263786798
+          },
+          {
+            "sensor_id": "mblr-2/00038635/volume",
+            "n_intervals": 32195,
+            "mean_interval_hours": 1.3169436247864574,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 13.981277147694511,
+            "on_time_count": 30510,
+            "early_count": 0,
+            "late_count": 1685,
+            "on_time_pct": 94.76626805404565
+          },
+          {
+            "sensor_id": "mblr-2/00082616/volume",
+            "n_intervals": 19620,
+            "mean_interval_hours": 2.1402650356778796,
+            "median_interval_hours": 2.0,
+            "std_interval_hours": 17.897198085253713,
+            "on_time_count": 5908,
+            "early_count": 0,
+            "late_count": 13712,
+            "on_time_pct": 30.112130479102955
+          },
+          {
+            "sensor_id": "mblr-2/00082737/volume",
+            "n_intervals": 28792,
+            "mean_interval_hours": 1.458703806612948,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 15.022046131870786,
+            "on_time_count": 24958,
+            "early_count": 0,
+            "late_count": 3834,
+            "on_time_pct": 86.68380105584885
+          },
+          {
+            "sensor_id": "mblr-2/00082815/volume",
+            "n_intervals": 32148,
+            "mean_interval_hours": 1.306333208908797,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 12.885133525043992,
+            "on_time_count": 30343,
+            "early_count": 0,
+            "late_count": 1805,
+            "on_time_pct": 94.3853427895981
+          },
+          {
+            "sensor_id": "mblr-2/00082827/volume",
+            "n_intervals": 30073,
+            "mean_interval_hours": 1.3962690785754663,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 14.46719401818233,
+            "on_time_count": 26732,
+            "early_count": 0,
+            "late_count": 3341,
+            "on_time_pct": 88.89036677418282
+          },
+          {
+            "sensor_id": "mblr-2/00082840/volume",
+            "n_intervals": 27237,
+            "mean_interval_hours": 1.5416896133935456,
+            "median_interval_hours": 1.0,
+            "std_interval_hours": 15.26382987816994,
+            "on_time_count": 21456,
+            "early_count": 0,
+            "late_count": 5781,
+            "on_time_pct": 78.77519550611301
+          }
+        ],
+        "action": "REPORT_ONLY"
+      },
+      "timestamp": "2026-10-10T22:30:38.464001"
+    },
+    {
+      "step_name": "validate_data_integrity",
+      "description": "Comprehensive data integrity validation",
+      "rows_before": 270499,
+      "rows_after": 270499,
+      "rows_affected": 0,
+      "details": {
+        "checks": {
+          "required_columns_present": false,
+          "missing_required_columns": [
+            "pressure",
+            "temperature",
+            "label"
+          ],
+          "no_duplicate_timestamps_per_sensor": "True",
+          "duplicate_timestamp_count": 0,
+          "timestamps_monotonic_per_sensor": true,
+          "sensors_non_monotonic": 0,
+          "telemetry_coverage": {
+            "flow_rate": 1.0
+          },
+          "target_column_present": false
+        },
+        "all_checks_passed": false,
+        "action": "VALIDATION_REPORT"
+      },
+      "timestamp": "2026-10-10T22:30:38.530844"
+    }
+  ]
+}

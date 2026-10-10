@@ -1,0 +1,24 @@
+{
+  "dataset_name": "SCADA_Pipeline",
+  "label_source": "real_ground_truth",
+  "label_method": "existing_column",
+  "description": "Mapped SCADA target column (0=normal, 1=abnormal) to canonical label",
+  "n_normal": 694,
+  "n_abnormal": 306,
+  "total_labeled": 1000,
+  "class_balance": 0.306,
+  "source_column": "label",
+  "source_values": [
+    0,
+    1
+  ],
+  "mapping_applied": {
+    "0": 0,
+    "1": 1
+  },
+  "generation_params": {},
+  "warnings": [],
+  "timestamp": "2026-10-10T22:29:46.981798",
+  "is_synthetic": false,
+  "is_real": true
+}

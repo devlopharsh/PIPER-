@@ -1,0 +1,1137 @@
+{
+  "dataset_name": "SCADA_Pipeline",
+  "audit_timestamp": "2026-10-10T22:29:46.982797",
+  "global": {
+    "total_observations": 1000,
+    "total_segments": 50,
+    "total_unique_timestamps": 17,
+    "timestamp_range": {
+      "start": "2024-01-01 00:00:00",
+      "end": "2024-01-01 00:16:00",
+      "span_hours": 0.26666666666666666
+    },
+    "duplicate_segment_timestamp_keys": 408,
+    "exact_duplicate_rows": 0
+  },
+  "per_segment": [
+    {
+      "segment_id": 1,
+      "n_observations": 17,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.6,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8432740427115678,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 2,
+      "n_observations": 19,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 3,
+      "n_observations": 24,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 11,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 18,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 4,
+      "n_observations": 13,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 3,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 2.0,
+        "std_minutes": 0.8333333333333334,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 7,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 5,
+      "n_observations": 23,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 11,
+      "first_timestamp": "2024-01-01 00:02:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.46709936649691375,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 19,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 6,
+      "n_observations": 20,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 10,
+        "1": 10
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 7,
+      "n_observations": 15,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 2.0,
+        "median_minutes": 2.0,
+        "std_minutes": 0.9258200997725514,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      },
+      "target_distribution": {
+        "0": 11,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 8,
+      "n_observations": 20,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:14:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6466697906828633,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 17,
+        "1": 3
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 9,
+      "n_observations": 21,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.4385290096535146,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 12,
+        "1": 9
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 10,
+      "n_observations": 20,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 9,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.6,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8432740427115678,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 17,
+        "1": 3
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 11,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.674199862463242,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "1": 11,
+        "0": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 12,
+      "n_observations": 22,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 9,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 13,
+      "n_observations": 14,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 5,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 2.0,
+        "median_minutes": 2.0,
+        "std_minutes": 0.9258200997725514,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      },
+      "target_distribution": {
+        "0": 9,
+        "1": 5
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 14,
+      "n_observations": 12,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 3,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:14:00",
+      "time_span_hours": 0.21666666666666667,
+      "interval_statistics": {
+        "mean_minutes": 1.625,
+        "median_minutes": 1.5,
+        "std_minutes": 0.7440238091428449,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      },
+      "target_distribution": {
+        "0": 9,
+        "1": 3
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 15,
+      "n_observations": 21,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8876253645985945,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 16,
+      "n_observations": 27,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 15,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.674199862463242,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 21,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 17,
+      "n_observations": 21,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 10,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8498365855987975,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 15,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 18,
+      "n_observations": 26,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 12,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.37553380809940534,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 19,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 19,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.4,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6992058987801011,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 8,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 20,
+      "n_observations": 19,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:02:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.4,
+        "median_minutes": 1.0,
+        "std_minutes": 0.9660917830792959,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 15,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 21,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:14:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.46709936649691375,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 10,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 22,
+      "n_observations": 27,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 13,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.5991446895152781,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 20,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 23,
+      "n_observations": 28,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 18,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 2.0,
+        "std_minutes": 0.8333333333333334,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 21,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 24,
+      "n_observations": 20,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 10,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:13:00",
+      "time_span_hours": 0.21666666666666667,
+      "interval_statistics": {
+        "mean_minutes": 1.4444444444444444,
+        "median_minutes": 1.0,
+        "std_minutes": 1.0137937550497031,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 16,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 25,
+      "n_observations": 22,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 9,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 20,
+        "1": 2
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 26,
+      "n_observations": 20,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 12,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 27,
+      "n_observations": 17,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 4,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789295,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 11,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 28,
+      "n_observations": 22,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3755338080994054,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 29,
+      "n_observations": 23,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 11,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:14:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6466697906828633,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 10
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 30,
+      "n_observations": 20,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 9,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:14:00",
+      "time_span_hours": 0.21666666666666667,
+      "interval_statistics": {
+        "mean_minutes": 1.3,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6749485577105528,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 31,
+      "n_observations": 16,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:02:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.21666666666666667,
+      "interval_statistics": {
+        "mean_minutes": 1.4444444444444444,
+        "median_minutes": 1.0,
+        "std_minutes": 0.5270462766947299,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 2
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 32,
+      "n_observations": 21,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3755338080994054,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 17,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 33,
+      "n_observations": 20,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 16,
+        "1": 4
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 34,
+      "n_observations": 18,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7071067811865476,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 11,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 35,
+      "n_observations": 19,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 1.0801234497346435,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 36,
+      "n_observations": 28,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 15,
+      "first_timestamp": "2024-01-01 00:02:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.1666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.38924947208076144,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 18,
+        "1": 10
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 37,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7071067811865476,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 10,
+        "1": 5
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 38,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.5,
+        "std_minutes": 0.5270462766947299,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 10
+      },
+      "target_distribution": {
+        "0": 9,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 39,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 5
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 40,
+      "n_observations": 19,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:02:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.1666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3892494720807615,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 13,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 41,
+      "n_observations": 18,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 8,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 1.0,
+        "std_minutes": 1.6414763002993507,
+        "min_minutes": 1.0,
+        "max_minutes": 6.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 16,
+        "1": 2
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 42,
+      "n_observations": 18,
+      "n_unique_timestamps": 8,
+      "duplicate_timestamps": 10,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:12:00",
+      "time_span_hours": 0.2,
+      "interval_statistics": {
+        "mean_minutes": 1.7142857142857142,
+        "median_minutes": 2.0,
+        "std_minutes": 0.7559289460184545,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 7
+      },
+      "target_distribution": {
+        "0": 10,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 43,
+      "n_observations": 33,
+      "n_unique_timestamps": 16,
+      "duplicate_timestamps": 17,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.0666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.25819888974716115,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 15
+      },
+      "target_distribution": {
+        "0": 23,
+        "1": 10
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 44,
+      "n_observations": 15,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 6,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.75,
+        "median_minutes": 1.5,
+        "std_minutes": 1.0350983390135313,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 8
+      },
+      "target_distribution": {
+        "0": 8,
+        "1": 7
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 45,
+      "n_observations": 23,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 10,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 12,
+        "1": 11
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 46,
+      "n_observations": 19,
+      "n_unique_timestamps": 15,
+      "duplicate_timestamps": 4,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.1428571428571428,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3631365196012815,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 14
+      },
+      "target_distribution": {
+        "0": 14,
+        "1": 5
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 47,
+      "n_observations": 19,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 7,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      },
+      "target_distribution": {
+        "0": 11,
+        "1": 8
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 48,
+      "n_observations": 15,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 5,
+      "first_timestamp": "2024-01-01 00:01:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.23333333333333334,
+      "interval_statistics": {
+        "mean_minutes": 1.5555555555555556,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7264831572567789,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      },
+      "target_distribution": {
+        "0": 9,
+        "1": 6
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 49,
+      "n_observations": 24,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 11,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:15:00",
+      "time_span_hours": 0.25,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.621581560508061,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      },
+      "target_distribution": {
+        "0": 19,
+        "1": 5
+      },
+      "has_both_classes": true
+    },
+    {
+      "segment_id": 50,
+      "n_observations": 23,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 9,
+      "first_timestamp": "2024-01-01 00:00:00",
+      "last_timestamp": "2024-01-01 00:16:00",
+      "time_span_hours": 0.26666666666666666,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.4385290096535146,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      },
+      "target_distribution": {
+        "0": 19,
+        "1": 4
+      },
+      "has_both_classes": true
+    }
+  ],
+  "feasibility_assessment": {
+    "total_segments": 50,
+    "segments_with_duplicate_timestamps": 50,
+    "segments_with_both_target_classes": 50,
+    "min_unique_timestamps_per_segment": 8,
+    "max_unique_timestamps_per_segment": 16,
+    "avg_unique_timestamps_per_segment": 11.84,
+    "global_time_span_hours": 0.26666666666666666,
+    "can_support_tabular_classification": true,
+    "can_support_sequence_construction": false,
+    "can_support_prediction_horizon": false,
+    "limitations": [
+      "50/50 segments have multiple readings per timestamp (conflicting telemetry/target values). Preserved with reading_index; not a regular time series.",
+      "Global time span is only 0.27 hours (< 1 hour). Insufficient for temporal sequence modeling with meaningful horizons.",
+      "Minimum unique timestamps per segment is 8 (< 10). Insufficient for meaningful sequence windows.",
+      "Metadata 'pipeline_id' is missing. Assuming single pipeline; segment_id used as sensor_id.",
+      "Telemetry 'vibration' not present in dataset. Not required for current tabular classification scope (adapted PIPER scope uses 3 primary telemetry: pressure, flow_rate, temperature)."
+    ]
+  }
+}

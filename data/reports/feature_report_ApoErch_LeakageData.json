@@ -1,0 +1,269 @@
+{
+  "dataset_name": "ApoErch_LeakageData",
+  "input_columns": [
+    "sensor_id",
+    "timestamp",
+    "Volume",
+    "Unnamed: 3",
+    "Unnamed: 4",
+    "flow_rate"
+  ],
+  "output_columns": [
+    "sensor_id",
+    "timestamp",
+    "Volume",
+    "Unnamed: 3",
+    "Unnamed: 4",
+    "flow_rate",
+    "hour",
+    "dayofweek",
+    "month",
+    "quarter",
+    "dayofyear",
+    "weekofyear",
+    "is_weekend",
+    "sin_hour",
+    "cos_hour",
+    "sin_dayofweek",
+    "cos_dayofweek",
+    "sin_month",
+    "cos_month",
+    "roll_6h_mean_flow_rate",
+    "roll_6h_std_flow_rate",
+    "roll_24h_mean_flow_rate",
+    "roll_24h_std_flow_rate",
+    "roll_168h_mean_flow_rate",
+    "roll_168h_std_flow_rate",
+    "diff_1h_flow_rate",
+    "diff_6h_flow_rate",
+    "diff_24h_flow_rate",
+    "rel_to_roll_24h_flow_rate",
+    "rel_to_roll_168h_flow_rate",
+    "sensor_id_encoded",
+    "n_sensors"
+  ],
+  "primary_telemetry_present": [
+    "flow_rate"
+  ],
+  "primary_telemetry_missing": [
+    "pressure",
+    "temperature"
+  ],
+  "derived_features": [
+    "hour",
+    "dayofweek",
+    "month",
+    "roll_6h_mean_flow_rate",
+    "roll_6h_std_flow_rate",
+    "roll_24h_mean_flow_rate",
+    "roll_24h_std_flow_rate",
+    "roll_168h_mean_flow_rate",
+    "roll_168h_std_flow_rate",
+    "diff_1h_flow_rate",
+    "diff_6h_flow_rate",
+    "diff_24h_flow_rate",
+    "rel_to_roll_24h_flow_rate",
+    "rel_to_roll_168h_flow_rate",
+    "sensor_id_encoded",
+    "n_sensors"
+  ],
+  "temporal_features": [
+    "hour",
+    "dayofweek",
+    "month",
+    "quarter",
+    "dayofyear",
+    "weekofyear",
+    "is_weekend",
+    "sin_hour",
+    "cos_hour",
+    "sin_dayofweek",
+    "cos_dayofweek",
+    "sin_month",
+    "cos_month"
+  ],
+  "metadata_features": [
+    "sensor_id",
+    "timestamp",
+    "sensor_id_encoded",
+    "n_sensors"
+  ],
+  "total_features": 32,
+  "start_time": "2026-10-10T22:30:43.484676",
+  "end_time": "2026-10-10T22:30:44.111633",
+  "steps": [
+    {
+      "step_name": "preserve_primary_telemetry",
+      "description": "Primary telemetry columns preserved as-is (no transformation)",
+      "features_created": [
+        "flow_rate"
+      ],
+      "feature_types": {
+        "flow_rate": "primary"
+      },
+      "parameters": {
+        "primary_telemetry": [
+          "pressure",
+          "flow_rate",
+          "temperature"
+        ]
+      },
+      "timestamp": "2026-10-10T22:30:43.487673"
+    },
+    {
+      "step_name": "add_temporal_features",
+      "description": "Extract temporal features from timestamp",
+      "features_created": [
+        "hour",
+        "dayofweek",
+        "month",
+        "quarter",
+        "dayofyear",
+        "weekofyear",
+        "is_weekend",
+        "sin_hour",
+        "cos_hour",
+        "sin_dayofweek",
+        "cos_dayofweek",
+        "sin_month",
+        "cos_month"
+      ],
+      "feature_types": {
+        "hour": "temporal",
+        "dayofweek": "temporal",
+        "month": "temporal",
+        "quarter": "temporal",
+        "dayofyear": "temporal",
+        "weekofyear": "temporal",
+        "is_weekend": "temporal",
+        "sin_hour": "temporal",
+        "cos_hour": "temporal",
+        "sin_dayofweek": "temporal",
+        "cos_dayofweek": "temporal",
+        "sin_month": "temporal",
+        "cos_month": "temporal"
+      },
+      "parameters": {
+        "timestamp_col": "timestamp",
+        "features_requested": [
+          "hour",
+          "dayofweek",
+          "month",
+          "quarter",
+          "dayofyear",
+          "weekofyear",
+          "is_weekend",
+          "sin_hour",
+          "cos_hour",
+          "sin_dayofweek",
+          "cos_dayofweek",
+          "sin_month",
+          "cos_month"
+        ]
+      },
+      "timestamp": "2026-10-10T22:30:43.631764"
+    },
+    {
+      "step_name": "add_rolling_statistics",
+      "description": "Rolling statistics per sensor for ['flow_rate']",
+      "features_created": [
+        "roll_6h_mean_flow_rate",
+        "roll_6h_std_flow_rate",
+        "roll_24h_mean_flow_rate",
+        "roll_24h_std_flow_rate",
+        "roll_168h_mean_flow_rate",
+        "roll_168h_std_flow_rate"
+      ],
+      "feature_types": {
+        "roll_6h_mean_flow_rate": "derived",
+        "roll_6h_std_flow_rate": "derived",
+        "roll_24h_mean_flow_rate": "derived",
+        "roll_24h_std_flow_rate": "derived",
+        "roll_168h_mean_flow_rate": "derived",
+        "roll_168h_std_flow_rate": "derived"
+      },
+      "parameters": {
+        "sensor_col": "sensor_id",
+        "telemetry_cols": [
+          "flow_rate"
+        ],
+        "windows_hours": [
+          6,
+          24,
+          168
+        ],
+        "statistics": [
+          "mean",
+          "std"
+        ]
+      },
+      "timestamp": "2026-10-10T22:30:43.872644"
+    },
+    {
+      "step_name": "add_rate_of_change",
+      "description": "Rate of change (diff) for ['flow_rate']",
+      "features_created": [
+        "diff_1h_flow_rate",
+        "diff_6h_flow_rate",
+        "diff_24h_flow_rate"
+      ],
+      "feature_types": {
+        "diff_1h_flow_rate": "derived",
+        "diff_6h_flow_rate": "derived",
+        "diff_24h_flow_rate": "derived"
+      },
+      "parameters": {
+        "sensor_col": "sensor_id",
+        "telemetry_cols": [
+          "flow_rate"
+        ],
+        "periods_hours": [
+          1,
+          6,
+          24
+        ]
+      },
+      "timestamp": "2026-10-10T22:30:44.001726"
+    },
+    {
+      "step_name": "add_relative_features",
+      "description": "Relative features (value / rolling mean) for ['flow_rate']",
+      "features_created": [
+        "rel_to_roll_24h_flow_rate",
+        "rel_to_roll_168h_flow_rate"
+      ],
+      "feature_types": {
+        "rel_to_roll_24h_flow_rate": "derived",
+        "rel_to_roll_168h_flow_rate": "derived"
+      },
+      "parameters": {
+        "sensor_col": "sensor_id",
+        "telemetry_cols": [
+          "flow_rate"
+        ],
+        "reference_windows_hours": [
+          24,
+          168
+        ]
+      },
+      "timestamp": "2026-10-10T22:30:44.096751"
+    },
+    {
+      "step_name": "add_metadata_features",
+      "description": "Metadata encoding features",
+      "features_created": [
+        "sensor_id_encoded",
+        "n_sensors"
+      ],
+      "feature_types": {
+        "sensor_id_encoded": "metadata",
+        "n_sensors": "metadata"
+      },
+      "parameters": {
+        "sensor_col": "sensor_id",
+        "pipeline_col": "pipeline_id"
+      },
+      "timestamp": "2026-10-10T22:30:44.111633"
+    }
+  ]
+}
