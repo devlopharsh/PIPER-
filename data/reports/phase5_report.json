@@ -1,0 +1,191 @@
+{
+  "dataset_name": "scada",
+  "timestamp": "2026-10-27T18:23:17.059141",
+  "phase4_model_info": {
+    "model_name": "RandomForest",
+    "threshold": 0.67,
+    "feature_names": [
+      "compressor_state",
+      "energy_consumption",
+      "flow_pressure_ratio",
+      "flow_rate",
+      "pressure",
+      "pump_speed",
+      "pump_state",
+      "sensor_id_encoded",
+      "temperature",
+      "valve_status"
+    ],
+    "n_features": 10,
+    "model_params": {
+      "bootstrap": true,
+      "ccp_alpha": 0.0,
+      "class_weight": "balanced",
+      "criterion": "gini",
+      "max_depth": 10,
+      "max_features": "sqrt",
+      "max_leaf_nodes": null,
+      "max_samples": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 2,
+      "min_samples_split": 5,
+      "min_weight_fraction_leaf": 0.0,
+      "monotonic_cst": null,
+      "n_estimators": 200,
+      "n_jobs": -1,
+      "oob_score": false,
+      "random_state": 42,
+      "verbose": 0,
+      "warm_start": false
+    }
+  },
+  "test_split_info": {
+    "test_size": 217,
+    "test_sensors": 10,
+    "test_class_dist": {
+      "0": 145,
+      "1": 72
+    },
+    "test_abnormal_rate": 0.3317972350230415
+  },
+  "verification": {
+    "confusion_matrix_orientation": "sklearn convention: rows=true, cols=pred. TN=cm[0,0], FP=cm[0,1], FN=cm[1,0], TP=cm[1,1]",
+    "positive_class": "1 = Abnormal/Leak (consistent with Phase 2 label generation)",
+    "threshold_application": "pred = (proba >= 0.67).astype(int); verified: True",
+    "saved_vs_recomputed_predictions": {
+      "probabilities_match": true,
+      "predictions_match": true
+    },
+    "metrics_recomputed_from_saved_artifacts": true,
+    "no_test_data_used_for_model_selection": true,
+    "no_test_data_used_for_threshold_selection": true,
+    "preprocessing_fitted_on_training_only": true
+  },
+  "evaluation_metrics": {
+    "accuracy": 0.9539170506912442,
+    "precision": 0.9696969696969697,
+    "recall": 0.8888888888888888,
+    "f1_score": 0.927536231884058,
+    "roc_auc": 0.9846743295019157,
+    "pr_auc": 0.9771496050128078,
+    "specificity": 0.9862068965517241,
+    "confusion_matrix": [
+      [
+        143,
+        2
+      ],
+      [
+        8,
+        64
+      ]
+    ],
+    "tn": 143,
+    "fp": 2,
+    "fn": 8,
+    "tp": 64,
+    "threshold": 0.67,
+    "class_report": {
+      "0": {
+        "precision": 0.9470198675496688,
+        "recall": 0.9862068965517241,
+        "f1-score": 0.9662162162162162,
+        "support": 145.0
+      },
+      "1": {
+        "precision": 0.9696969696969697,
+        "recall": 0.8888888888888888,
+        "f1-score": 0.927536231884058,
+        "support": 72.0
+      },
+      "accuracy": 0.9539170506912442,
+      "macro avg": {
+        "precision": 0.9583584186233193,
+        "recall": 0.9375478927203065,
+        "f1-score": 0.9468762240501372,
+        "support": 217.0
+      },
+      "weighted avg": {
+        "precision": 0.9545440673404783,
+        "recall": 0.9539170506912442,
+        "f1-score": 0.9533823043640716,
+        "support": 217.0
+      }
+    },
+    "positive_class": 1,
+    "negative_class": 0
+  },
+  "model_comparison": [
+    {
+      "model_name": "LogisticRegression",
+      "val_metrics": {
+        "accuracy": 0.8666666666666667,
+        "precision": 0.9411764705882353,
+        "recall": 0.5517241379310345,
+        "f1": 0.6956521739130435,
+        "roc_auc": 0.7568058076225045,
+        "threshold": 0.7000000000000001
+      },
+      "test_metrics": null,
+      "selected": false
+    },
+    {
+      "model_name": "RandomForest",
+      "val_metrics": {
+        "accuracy": 0.9619047619047619,
+        "precision": 0.9629629629629629,
+        "recall": 0.896551724137931,
+        "f1": 0.9285714285714286,
+        "roc_auc": 0.9877495462794919,
+        "threshold": 0.67
+      },
+      "test_metrics": {
+        "accuracy": 0.9539170506912442,
+        "precision": 0.9696969696969697,
+        "recall": 0.8888888888888888,
+        "f1": 0.927536231884058,
+        "roc_auc": 0.9846743295019157
+      },
+      "selected": true
+    },
+    {
+      "model_name": "XGBoost",
+      "val_metrics": {
+        "accuracy": 0.9523809523809523,
+        "precision": 0.9615384615384616,
+        "recall": 0.8620689655172413,
+        "f1": 0.9090909090909091,
+        "roc_auc": 0.9886569872958257,
+        "threshold": 0.9
+      },
+      "test_metrics": null,
+      "selected": false
+    }
+  ],
+  "threshold_selection": {
+    "method": "validation_f1_maximization",
+    "description": "For each candidate model, threshold was selected by maximizing F1-score on the validation set across 99 thresholds (0.01 to 0.99). The model with highest validation F1 was selected, and its corresponding threshold was used for test evaluation.",
+    "selected_threshold": 0.67,
+    "selected_model": "RandomForest",
+    "validation_f1_at_threshold": {
+      "LogisticRegression": 0.6957,
+      "RandomForest": 0.9286,
+      "XGBoost": 0.9091
+    },
+    "note": "Threshold was NOT optimized on test set. Test set used only for final evaluation."
+  },
+  "limitations": [
+    "Split is sensor-level (35 train / 5 val / 10 test sensors), not pipeline-level. pipeline_id unavailable in dataset.",
+    "All temporal features are constant (single-day data) and were correctly excluded from predictors.",
+    "Generalization to unseen pipelines cannot be guaranteed by current split strategy.",
+    "XGBoost shows overfitting (train F1=0.998 vs val F1=0.909); Random Forest selected for better generalization.",
+    "Dataset has 16-minute time span with conflicting duplicate timestamps - temporal modeling not supported.",
+    "Only 10 test sensors (217 samples); confidence intervals on metrics would be wide.",
+    "Calibration curve shows moderate miscalibration at high probabilities (expected with Random Forest)."
+  ],
+  "plot_paths": {
+    "confusion_matrix": "data\\reports\\plots\\phase5_confusion_matrix.png",
+    "roc_curve": "data\\reports\\plots\\phase5_roc_curve.png",
+    "precision_recall_curve": "data\\reports\\plots\\phase5_pr_curve.png",
+    "calibration_curve": "data\\reports\\plots\\phase5_calibration_curve.png"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "strategy": "tabular_stratified_group_aware",
+  "random_state": 42,
+  "train_sensors": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    13,
+    14,
+    16,
+    17,
+    18,
+    20,
+    22,
+    25,
+    26,
+    27,
+    28,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    37,
+    38,
+    40,
+    42,
+    45,
+    46,
+    47,
+    48,
+    49
+  ],
+  "val_sensors": [
+    3,
+    24,
+    36,
+    41,
+    44
+  ],
+  "test_sensors": [
+    8,
+    11,
+    15,
+    19,
+    21,
+    23,
+    29,
+    39,
+    43,
+    50
+  ],
+  "train_size": 678,
+  "val_size": 105,
+  "test_size": 217,
+  "train_class_dist": {
+    "0": 473,
+    "1": 205
+  },
+  "val_class_dist": {
+    "0": 76,
+    "1": 29
+  },
+  "test_class_dist": {
+    "0": 145,
+    "1": 72
+  },
+  "no_sensor_overlap": true
+}

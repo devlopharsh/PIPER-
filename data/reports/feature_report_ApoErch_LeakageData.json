@@ -89,8 +89,8 @@
     "n_sensors"
   ],
   "total_features": 32,
-  "start_time": "2026-10-10T22:30:43.484676",
-  "end_time": "2026-10-10T22:30:44.111633",
+  "start_time": "2026-10-27T18:38:47.390440",
+  "end_time": "2026-10-27T18:38:48.024245",
   "steps": [
     {
       "step_name": "preserve_primary_telemetry",
@@ -108,7 +108,7 @@
           "temperature"
         ]
       },
-      "timestamp": "2026-10-10T22:30:43.487673"
+      "timestamp": "2026-10-27T18:38:47.393956"
     },
     {
       "step_name": "add_temporal_features",
@@ -161,7 +161,7 @@
           "cos_month"
         ]
       },
-      "timestamp": "2026-10-10T22:30:43.631764"
+      "timestamp": "2026-10-27T18:38:47.526507"
     },
     {
       "step_name": "add_rolling_statistics",
@@ -197,7 +197,7 @@
           "std"
         ]
       },
-      "timestamp": "2026-10-10T22:30:43.872644"
+      "timestamp": "2026-10-27T18:38:47.770899"
     },
     {
       "step_name": "add_rate_of_change",
@@ -223,7 +223,7 @@
           24
         ]
       },
-      "timestamp": "2026-10-10T22:30:44.001726"
+      "timestamp": "2026-10-27T18:38:47.912584"
     },
     {
       "step_name": "add_relative_features",
@@ -246,7 +246,7 @@
           168
         ]
       },
-      "timestamp": "2026-10-10T22:30:44.096751"
+      "timestamp": "2026-10-27T18:38:48.008177"
     },
     {
       "step_name": "add_metadata_features",
@@ -263,7 +263,7 @@
         "sensor_col": "sensor_id",
         "pipeline_col": "pipeline_id"
       },
-      "timestamp": "2026-10-10T22:30:44.111633"
+      "timestamp": "2026-10-27T18:38:48.024245"
     }
   ]
 }

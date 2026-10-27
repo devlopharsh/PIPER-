@@ -1,0 +1,21 @@
+{
+  "phase": 6,
+  "method": "SHAP TreeExplainer",
+  "model": "RandomForestClassifier",
+  "test_rows_explained": 217,
+  "feature_count": 10,
+  "shap_output_shape": [
+    217,
+    10
+  ],
+  "all_shap_values_finite": true,
+  "threshold_used_for_existing_predictions": 0.67,
+  "model_retrained": false,
+  "threshold_changed": false,
+  "predictive_metrics_recomputed_or_changed": false,
+  "outputs": [
+    "data\\reports\\phase6\\shap_feature_importance.csv",
+    "data\\reports\\phase6\\shap_test_values.csv",
+    "data\\reports\\phase6\\fig_shap_feature_contributions.png"
+  ]
+}

@@ -1,0 +1,1280 @@
+# PIPER Phase 3 Summary Report: SCADA_Pipeline
+
+**Generated:** 2026-10-27T18:39:20.965655
+
+## Executive Summary
+
+| Metric | Value |
+|--------|-------|
+| Subtasks Complete | 0 |
+| Subtasks Blocked | 4 |
+| Subtasks Deferred | 0 |
+| Sequence Learning Viable | NO |
+| Tabular Classification Viable | YES |
+| Recommended Next Phase | tabular_classification |
+
+## Subtask Status
+
+### 3.1 Time-Series Ordering: [BLOCKED]
+
+**Evidence:**
+
+- Timestamp column: 'timestamp' (parsed as datetime)
+- Sensor/segment column: 'sensor_id'
+- Target column: 'label'
+- Primary telemetry present: ['pressure', 'flow_rate', 'temperature']
+- Global: 1000 observations, 50 segments, 17 unique timestamps
+- Global time span: 0.27 hours (2024-01-01 00:00:00 to 2024-01-01 00:16:00)
+- Duplicate (segment, timestamp) keys: 270 (678 rows)
+- Keys with conflicting telemetry/target: 270
+-   Example: segment=1, ts=2024-01-01 00:02:00, n_readings=3, telemetry_conflict=True, target_conflict=True
+- 'reading_index' column exists (max value: 6) - NOT a genuine timestamp
+-   reading_index only distinguishes repeated records; does not prove chronological order
+- Segments with duplicate timestamps: 50/50
+- Segments with monotonic unique timestamps: 50/50
+- Unique timestamps per segment: min=8, max=16, avg=11.8
+- ASSESSMENT: Reliable temporal ordering is NOT possible
+-   BLOCKER: Global time span only 0.27 hours (< 1 hour)
+-   BLOCKER: 270 (segment, timestamp) keys have conflicting telemetry/target values
+-   BLOCKER: Minimum unique timestamps per segment is 8 (< 10)
+-   BLOCKER: reading_index exists but cannot resolve conflicting measurements at same timestamp
+
+**Details:**
+
+```json
+{
+  "timestamp_column": "timestamp",
+  "sensor_column": "sensor_id",
+  "target_column": "label",
+  "telemetry_columns": [
+    "pressure",
+    "flow_rate",
+    "temperature"
+  ],
+  "global": {
+    "total_observations": 1000,
+    "total_segments": 50,
+    "total_unique_timestamps": 17,
+    "timestamp_range": {
+      "start": "2024-01-01 00:00:00",
+      "end": "2024-01-01 00:16:00",
+      "span_hours": 0.26666666666666666
+    }
+  },
+  "duplicate_analysis": {
+    "total_duplicate_rows": 678,
+    "duplicate_keys": 270,
+    "conflicting_keys": 270,
+    "conflict_examples": [
+      {
+        "segment": 1,
+        "timestamp": "2024-01-01 00:02:00",
+        "n_readings": 3,
+        "telemetry_conflict": true,
+        "target_conflict": true
+      },
+      {
+        "segment": 1,
+        "timestamp": "2024-01-01 00:05:00",
+        "n_readings": 2,
+        "telemetry_conflict": true,
+        "target_conflict": true
+      },
+      {
+        "segment": 1,
+        "timestamp": "2024-01-01 00:08:00",
+        "n_readings": 3,
+        "telemetry_conflict": true,
+        "target_conflict": true
+      },
+      {
+        "segment": 1,
+        "timestamp": "2024-01-01 00:10:00",
+        "n_readings": 2,
+        "telemetry_conflict": true,
+        "target_conflict": false
+      },
+      {
+        "segment": 2,
+        "timestamp": "2024-01-01 00:02:00",
+        "n_readings": 3,
+        "telemetry_conflict": true,
+        "target_conflict": true
+      }
+    ]
+  },
+  "has_reading_index": true,
+  "per_segment_ordering": [
+    {
+      "segment_id": 1,
+      "n_observations": 17,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.6,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8432740427115678,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 2,
+      "n_observations": 19,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 3,
+      "n_observations": 24,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 11,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 4,
+      "n_observations": 13,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 3,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 2.0,
+        "std_minutes": 0.8333333333333334,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 5,
+      "n_observations": 23,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 11,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.46709936649691375,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 6,
+      "n_observations": 20,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 7,
+      "n_observations": 15,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 2.0,
+        "median_minutes": 2.0,
+        "std_minutes": 0.9258200997725514,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      }
+    },
+    {
+      "segment_id": 8,
+      "n_observations": 20,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6466697906828633,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 9,
+      "n_observations": 21,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.4385290096535146,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      }
+    },
+    {
+      "segment_id": 10,
+      "n_observations": 20,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 9,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.6,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8432740427115678,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 11,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.674199862463242,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 12,
+      "n_observations": 22,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 9,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 13,
+      "n_observations": 14,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 5,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 2.0,
+        "median_minutes": 2.0,
+        "std_minutes": 0.9258200997725514,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      }
+    },
+    {
+      "segment_id": 14,
+      "n_observations": 12,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 3,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.625,
+        "median_minutes": 1.5,
+        "std_minutes": 0.7440238091428449,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 8
+      }
+    },
+    {
+      "segment_id": 15,
+      "n_observations": 21,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8876253645985945,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 16,
+      "n_observations": 27,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 15,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.674199862463242,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 17,
+      "n_observations": 21,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 10,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.8498365855987975,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 18,
+      "n_observations": 26,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 12,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.37553380809940534,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      }
+    },
+    {
+      "segment_id": 19,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.4,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6992058987801011,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 20,
+      "n_observations": 19,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.4,
+        "median_minutes": 1.0,
+        "std_minutes": 0.9660917830792959,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 21,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.46709936649691375,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 22,
+      "n_observations": 27,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 13,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.5991446895152781,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 13
+      }
+    },
+    {
+      "segment_id": 23,
+      "n_observations": 28,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 18,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 2.0,
+        "std_minutes": 0.8333333333333334,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 24,
+      "n_observations": 20,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 10,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.4444444444444444,
+        "median_minutes": 1.0,
+        "std_minutes": 1.0137937550497031,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 25,
+      "n_observations": 22,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 9,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.45226701686664544,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 26,
+      "n_observations": 20,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 27,
+      "n_observations": 17,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 4,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789295,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 28,
+      "n_observations": 22,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3755338080994054,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      }
+    },
+    {
+      "segment_id": 29,
+      "n_observations": 23,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 11,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2727272727272727,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6466697906828633,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 30,
+      "n_observations": 20,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 9,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6749485577105528,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 31,
+      "n_observations": 16,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.4444444444444444,
+        "median_minutes": 1.0,
+        "std_minutes": 0.5270462766947299,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 32,
+      "n_observations": 21,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1538461538461537,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3755338080994054,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      }
+    },
+    {
+      "segment_id": 33,
+      "n_observations": 20,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 34,
+      "n_observations": 18,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7071067811865476,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 35,
+      "n_observations": 19,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 1.0801234497346435,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 36,
+      "n_observations": 28,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 15,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.38924947208076144,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 37,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7071067811865476,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 38,
+      "n_observations": 15,
+      "n_unique_timestamps": 11,
+      "duplicate_timestamps": 4,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5,
+        "median_minutes": 1.5,
+        "std_minutes": 0.5270462766947299,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 10
+      }
+    },
+    {
+      "segment_id": 39,
+      "n_observations": 18,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 40,
+      "n_observations": 19,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3892494720807615,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 41,
+      "n_observations": 18,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 8,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.7777777777777777,
+        "median_minutes": 1.0,
+        "std_minutes": 1.6414763002993507,
+        "min_minutes": 1.0,
+        "max_minutes": 6.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 42,
+      "n_observations": 18,
+      "n_unique_timestamps": 8,
+      "duplicate_timestamps": 10,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.7142857142857142,
+        "median_minutes": 2.0,
+        "std_minutes": 0.7559289460184545,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 7
+      }
+    },
+    {
+      "segment_id": 43,
+      "n_observations": 33,
+      "n_unique_timestamps": 16,
+      "duplicate_timestamps": 17,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.0666666666666667,
+        "median_minutes": 1.0,
+        "std_minutes": 0.25819888974716115,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 15
+      }
+    },
+    {
+      "segment_id": 44,
+      "n_observations": 15,
+      "n_unique_timestamps": 9,
+      "duplicate_timestamps": 6,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.75,
+        "median_minutes": 1.5,
+        "std_minutes": 1.0350983390135313,
+        "min_minutes": 1.0,
+        "max_minutes": 4.0,
+        "n_intervals": 8
+      }
+    },
+    {
+      "segment_id": 45,
+      "n_observations": 23,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 10,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3333333333333333,
+        "median_minutes": 1.0,
+        "std_minutes": 0.6513389472789296,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 46,
+      "n_observations": 19,
+      "n_unique_timestamps": 15,
+      "duplicate_timestamps": 4,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.1428571428571428,
+        "median_minutes": 1.0,
+        "std_minutes": 0.3631365196012815,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 14
+      }
+    },
+    {
+      "segment_id": 47,
+      "n_observations": 19,
+      "n_unique_timestamps": 12,
+      "duplicate_timestamps": 7,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.3636363636363635,
+        "median_minutes": 1.0,
+        "std_minutes": 0.504524979109513,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 11
+      }
+    },
+    {
+      "segment_id": 48,
+      "n_observations": 15,
+      "n_unique_timestamps": 10,
+      "duplicate_timestamps": 5,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.5555555555555556,
+        "median_minutes": 1.0,
+        "std_minutes": 0.7264831572567789,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 9
+      }
+    },
+    {
+      "segment_id": 49,
+      "n_observations": 24,
+      "n_unique_timestamps": 13,
+      "duplicate_timestamps": 11,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.25,
+        "median_minutes": 1.0,
+        "std_minutes": 0.621581560508061,
+        "min_minutes": 1.0,
+        "max_minutes": 3.0,
+        "n_intervals": 12
+      }
+    },
+    {
+      "segment_id": 50,
+      "n_observations": 23,
+      "n_unique_timestamps": 14,
+      "duplicate_timestamps": 9,
+      "timestamps_monotonic": true,
+      "interval_statistics": {
+        "mean_minutes": 1.2307692307692308,
+        "median_minutes": 1.0,
+        "std_minutes": 0.4385290096535146,
+        "min_minutes": 1.0,
+        "max_minutes": 2.0,
+        "n_intervals": 13
+      }
+    }
+  ],
+  "feasibility": {
+    "can_order_reliably": false,
+    "blocking_reasons": [
+      "Global time span only 0.27 hours (< 1 hour)",
+      "270 (segment, timestamp) keys have conflicting telemetry/target values",
+      "Minimum unique timestamps per segment is 8 (< 10)",
+      "reading_index exists but cannot resolve conflicting measurements at same timestamp"
+    ]
+  }
+}
+```
+
+### 3.2 Sliding-Window Generation: [BLOCKED]
+
+**Evidence:**
+
+- Prerequisite (3.1 Time-Series Ordering) is BLOCKED
+- Cannot generate sliding windows without reliable temporal ordering
+-   Root cause: Global time span only 0.27 hours (< 1 hour)
+-   Root cause: 270 (segment, timestamp) keys have conflicting telemetry/target values
+-   Root cause: Minimum unique timestamps per segment is 8 (< 10)
+-   Root cause: reading_index exists but cannot resolve conflicting measurements at same timestamp
+- ASSESSMENT: Sliding-window generation BLOCKED by dataset limitations
+
+**Details:**
+
+```json
+{
+  "ordering_feasibility": {
+    "can_order_reliably": false,
+    "blocking_reasons": [
+      "Global time span only 0.27 hours (< 1 hour)",
+      "270 (segment, timestamp) keys have conflicting telemetry/target values",
+      "Minimum unique timestamps per segment is 8 (< 10)",
+      "reading_index exists but cannot resolve conflicting measurements at same timestamp"
+    ]
+  },
+  "would_require": {
+    "reliable_unique_timestamps_per_segment": ">= 10",
+    "no_conflicting_measurements": "zero conflicting (segment, timestamp) keys",
+    "sufficient_time_span": ">= 1 hour for meaningful horizons",
+    "genuine_temporal_ordering": "not reading_index or row order"
+  }
+}
+```
+
+### 3.3 Sequence Length Selection: [BLOCKED]
+
+**Evidence:**
+
+- Prerequisite (3.1 Time-Series Ordering) is BLOCKED
+- Cannot evaluate sequence lengths without reliable temporal ordering
+- Max unique timestamps in any segment: 16
+- Candidate window sizes: [3, 5, 10]
+- All candidate sizes exceed or barely fit available sequence lengths
+- ASSESSMENT: Sequence length selection BLOCKED - no valid sequences can be formed
+
+**Details:**
+
+```json
+{
+  "ordering_feasibility": {
+    "can_order_reliably": false,
+    "blocking_reasons": [
+      "Global time span only 0.27 hours (< 1 hour)",
+      "270 (segment, timestamp) keys have conflicting telemetry/target values",
+      "Minimum unique timestamps per segment is 8 (< 10)",
+      "reading_index exists but cannot resolve conflicting measurements at same timestamp"
+    ]
+  },
+  "candidate_sizes": [
+    3,
+    5,
+    10
+  ],
+  "available_sequence_lengths": [
+    {
+      "segment_id": 1,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 2,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 3,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 4,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 5,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 6,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 7,
+      "n_unique_timestamps": 9
+    },
+    {
+      "segment_id": 8,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 9,
+      "n_unique_timestamps": 14
+    },
+    {
+      "segment_id": 10,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 11,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 12,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 13,
+      "n_unique_timestamps": 9
+    },
+    {
+      "segment_id": 14,
+      "n_unique_timestamps": 9
+    },
+    {
+      "segment_id": 15,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 16,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 17,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 18,
+      "n_unique_timestamps": 14
+    },
+    {
+      "segment_id": 19,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 20,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 21,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 22,
+      "n_unique_timestamps": 14
+    },
+    {
+      "segment_id": 23,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 24,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 25,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 26,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 27,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 28,
+      "n_unique_timestamps": 14
+    },
+    {
+      "segment_id": 29,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 30,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 31,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 32,
+      "n_unique_timestamps": 14
+    },
+    {
+      "segment_id": 33,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 34,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 35,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 36,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 37,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 38,
+      "n_unique_timestamps": 11
+    },
+    {
+      "segment_id": 39,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 40,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 41,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 42,
+      "n_unique_timestamps": 8
+    },
+    {
+      "segment_id": 43,
+      "n_unique_timestamps": 16
+    },
+    {
+      "segment_id": 44,
+      "n_unique_timestamps": 9
+    },
+    {
+      "segment_id": 45,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 46,
+      "n_unique_timestamps": 15
+    },
+    {
+      "segment_id": 47,
+      "n_unique_timestamps": 12
+    },
+    {
+      "segment_id": 48,
+      "n_unique_timestamps": 10
+    },
+    {
+      "segment_id": 49,
+      "n_unique_timestamps": 13
+    },
+    {
+      "segment_id": 50,
+      "n_unique_timestamps": 14
+    }
+  ],
+  "max_possible_window": 16
+}
+```
+
+### 3.4 Train/Validation/Test Split: [BLOCKED]
+
+**Evidence:**
+
+- Sequence-based split IMPOSSIBLE: no reliable temporal ordering
+- Recommending tabular stratified group-aware split for Phase 4
+- Stratification not possible (some class has <2 sensors); using random group-aware split
+- Tabular split: 678 train / 105 val / 217 test
+-   Train class dist: {0: 473, 1: 205}
+-   Val class dist: {0: 76, 1: 29}
+-   Test class dist: {0: 145, 1: 72}
+-   Train sensors: 35, Val sensors: 5, Test sensors: 10
+-   No sensor appears in multiple splits (prevents leakage)
+- Recommended split strategy: tabular_stratified
+- ASSESSMENT: Sequence split BLOCKED; tabular group-aware split RECOMMENDED for Phase 4
+
+**Details:**
+
+```json
+{
+  "sequence_feasible": false,
+  "ordering_feasibility": {
+    "can_order_reliably": false,
+    "blocking_reasons": [
+      "Global time span only 0.27 hours (< 1 hour)",
+      "270 (segment, timestamp) keys have conflicting telemetry/target values",
+      "Minimum unique timestamps per segment is 8 (< 10)",
+      "reading_index exists but cannot resolve conflicting measurements at same timestamp"
+    ]
+  },
+  "duplicate_keys_total": 678,
+  "split": {
+    "strategy": "tabular_stratified_group_aware",
+    "description": "Stratified by target class, grouped by sensor (no sensor in multiple splits)",
+    "train_sensors": [
+      14,
+      40,
+      31,
+      46,
+      18,
+      49,
+      27,
+      26,
+      33,
+      20,
+      13,
+      5,
+      38,
+      9,
+      4,
+      7,
+      42,
+      47,
+      48,
+      16,
+      10,
+      17,
+      25,
+      35,
+      32,
+      1,
+      45,
+      28,
+      34,
+      6,
+      30,
+      12,
+      37,
+      2,
+      22
+    ],
+    "val_sensors": [
+      3,
+      44,
+      36,
+      24,
+      41
+    ],
+    "test_sensors": [
+      11,
+      23,
+      19,
+      50,
+      21,
+      8,
+      43,
+      15,
+      29,
+      39
+    ],
+    "train_size": 678,
+    "val_size": 105,
+    "test_size": 217,
+    "train_class_dist": {
+      "0": 473,
+      "1": 205
+    },
+    "val_class_dist": {
+      "0": 76,
+      "1": 29
+    },
+    "test_class_dist": {
+      "0": 145,
+      "1": 72
+    }
+  },
+  "recommended_strategy": "tabular_stratified",
+  "test_fraction": 0.2,
+  "val_fraction": 0.1
+}
+```
+
+## Overall Assessment
+
+- **subtasks_complete**: 0
+- **subtasks_blocked**: 4
+- **subtasks_deferred**: 0
+- **sequence_learning_viable**: False
+- **tabular_classification_viable**: True
+- **next_phase_recommendation**: tabular_classification
+
+## Recommendations
+
+- Sequence learning (LSTM/GRU) is NOT viable with current SCADA dataset
+- Proceed to Phase 4 with TABULAR classification models (Random Forest, XGBoost, MLP, SVM)
+- Use group-aware stratified split (sensor-level) to prevent data leakage
+- Do NOT attempt to fabricate temporal sequences from conflicting duplicate timestamps
+- If temporal modeling is required, collect data with: longer time span (>24h), regular sampling intervals, and unique (sensor, timestamp) keys
+
+## Artifacts Generated
+
+- `data/reports/phase3_feasibility_report.json` - Full feasibility report
+- `data/reports/phase3_summary.md` - This summary
+- `data/processed/scada_train.csv` - Training set (tabular)
+- `data/processed/scada_val.csv` - Validation set (tabular)
+- `data/processed/scada_test.csv` - Test set (tabular, ISOLATED)
+- `data/reports/scada_tabular_split_info.json` - Split metadata
+
+---
+
+**Conclusion:** The SCADA dataset cannot support temporal sequence construction for LSTM/GRU models. Phase 3 sequence track is BLOCKED. Phase 4 should proceed with tabular classification using the provided train/val/test splits which are leakage-safe at the sensor level.

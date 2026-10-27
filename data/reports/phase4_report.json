@@ -1,0 +1,567 @@
+{
+  "dataset_name": "scada",
+  "timestamp": "2026-10-27T18:12:03.080245",
+  "split_info": {
+    "strategy": "tabular_stratified_group_aware",
+    "random_state": 42,
+    "train_sensors": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      9,
+      10,
+      12,
+      13,
+      14,
+      16,
+      17,
+      18,
+      20,
+      22,
+      25,
+      26,
+      27,
+      28,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      37,
+      38,
+      40,
+      42,
+      45,
+      46,
+      47,
+      48,
+      49
+    ],
+    "val_sensors": [
+      3,
+      24,
+      36,
+      41,
+      44
+    ],
+    "test_sensors": [
+      8,
+      11,
+      15,
+      19,
+      21,
+      23,
+      29,
+      39,
+      43,
+      50
+    ],
+    "train_size": 678,
+    "val_size": 105,
+    "test_size": 217,
+    "train_class_dist": {
+      "0": 473,
+      "1": 205
+    },
+    "val_class_dist": {
+      "0": 76,
+      "1": 29
+    },
+    "test_class_dist": {
+      "0": 145,
+      "1": 72
+    },
+    "no_sensor_overlap": true
+  },
+  "feature_schema": {
+    "predictor_features": [
+      "compressor_state",
+      "energy_consumption",
+      "flow_pressure_ratio",
+      "flow_rate",
+      "pressure",
+      "pump_speed",
+      "pump_state",
+      "sensor_id_encoded",
+      "temperature",
+      "valve_status"
+    ],
+    "target_column": "label",
+    "excluded_features": [
+      "label",
+      "alarm_triggered",
+      "event_type",
+      "timestamp",
+      "timestamp_parsed",
+      "sensor_id",
+      "reading_index",
+      "n_sensors",
+      "hour",
+      "dayofweek",
+      "month",
+      "quarter",
+      "dayofyear",
+      "weekofyear",
+      "is_weekend",
+      "sin_hour",
+      "cos_hour",
+      "sin_dayofweek",
+      "cos_dayofweek",
+      "sin_month",
+      "cos_month"
+    ],
+    "n_features": 10
+  },
+  "model_results": [
+    {
+      "model_name": "LogisticRegression",
+      "model_config": {
+        "class_weight": "balanced",
+        "max_iter": 1000,
+        "solver": "lbfgs",
+        "random_state": 42
+      },
+      "train_metrics": {
+        "accuracy": 0.8392330383480826,
+        "precision": 0.8692307692307693,
+        "recall": 0.551219512195122,
+        "f1": 0.6746268656716418,
+        "roc_auc": 0.8617645542205952,
+        "confusion_matrix": [
+          [
+            456,
+            17
+          ],
+          [
+            92,
+            113
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.8321167883211679,
+            "recall": 0.9640591966173362,
+            "f1-score": 0.8932419196865817,
+            "support": 473.0
+          },
+          "1": {
+            "precision": 0.8692307692307693,
+            "recall": 0.551219512195122,
+            "f1-score": 0.6746268656716418,
+            "support": 205.0
+          },
+          "accuracy": 0.8392330383480826,
+          "macro avg": {
+            "precision": 0.8506737787759686,
+            "recall": 0.7576393544062291,
+            "f1-score": 0.7839343926791118,
+            "support": 678.0
+          },
+          "weighted avg": {
+            "precision": 0.8433385672097642,
+            "recall": 0.8392330383480826,
+            "f1-score": 0.8271414977499111,
+            "support": 678.0
+          }
+        },
+        "threshold": 0.7000000000000001
+      },
+      "val_metrics": {
+        "accuracy": 0.8666666666666667,
+        "precision": 0.9411764705882353,
+        "recall": 0.5517241379310345,
+        "f1": 0.6956521739130435,
+        "roc_auc": 0.7568058076225045,
+        "confusion_matrix": [
+          [
+            75,
+            1
+          ],
+          [
+            13,
+            16
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.8522727272727273,
+            "recall": 0.9868421052631579,
+            "f1-score": 0.9146341463414634,
+            "support": 76.0
+          },
+          "1": {
+            "precision": 0.9411764705882353,
+            "recall": 0.5517241379310345,
+            "f1-score": 0.6956521739130435,
+            "support": 29.0
+          },
+          "accuracy": 0.8666666666666667,
+          "macro avg": {
+            "precision": 0.8967245989304813,
+            "recall": 0.7692831215970961,
+            "f1-score": 0.8051431601272534,
+            "support": 105.0
+          },
+          "weighted avg": {
+            "precision": 0.8768270944741534,
+            "recall": 0.8666666666666667,
+            "f1-score": 0.8541534110993284,
+            "support": 105.0
+          }
+        },
+        "threshold": 0.7000000000000001
+      },
+      "test_metrics": null,
+      "threshold": 0.7000000000000001,
+      "feature_names": [
+        "compressor_state",
+        "energy_consumption",
+        "flow_pressure_ratio",
+        "flow_rate",
+        "pressure",
+        "pump_speed",
+        "pump_state",
+        "sensor_id_encoded",
+        "temperature",
+        "valve_status"
+      ],
+      "training_time_seconds": 0.09781813621520996
+    },
+    {
+      "model_name": "RandomForest",
+      "model_config": {
+        "n_estimators": 200,
+        "max_depth": 10,
+        "min_samples_split": 5,
+        "min_samples_leaf": 2,
+        "class_weight": "balanced",
+        "random_state": 42
+      },
+      "train_metrics": {
+        "accuracy": 0.9646017699115044,
+        "precision": 1.0,
+        "recall": 0.8829268292682927,
+        "f1": 0.9378238341968912,
+        "roc_auc": 0.9995565410199556,
+        "confusion_matrix": [
+          [
+            473,
+            0
+          ],
+          [
+            24,
+            181
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.9517102615694165,
+            "recall": 1.0,
+            "f1-score": 0.9752577319587629,
+            "support": 473.0
+          },
+          "1": {
+            "precision": 1.0,
+            "recall": 0.8829268292682927,
+            "f1-score": 0.9378238341968912,
+            "support": 205.0
+          },
+          "accuracy": 0.9646017699115044,
+          "macro avg": {
+            "precision": 0.9758551307847083,
+            "recall": 0.9414634146341463,
+            "f1-score": 0.956540783077827,
+            "support": 678.0
+          },
+          "weighted avg": {
+            "precision": 0.9663111411833835,
+            "recall": 0.9646017699115044,
+            "f1-score": 0.9639392230484625,
+            "support": 678.0
+          }
+        },
+        "threshold": 0.67
+      },
+      "val_metrics": {
+        "accuracy": 0.9619047619047619,
+        "precision": 0.9629629629629629,
+        "recall": 0.896551724137931,
+        "f1": 0.9285714285714286,
+        "roc_auc": 0.9877495462794919,
+        "confusion_matrix": [
+          [
+            75,
+            1
+          ],
+          [
+            3,
+            26
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.9615384615384616,
+            "recall": 0.9868421052631579,
+            "f1-score": 0.974025974025974,
+            "support": 76.0
+          },
+          "1": {
+            "precision": 0.9629629629629629,
+            "recall": 0.896551724137931,
+            "f1-score": 0.9285714285714286,
+            "support": 29.0
+          },
+          "accuracy": 0.9619047619047619,
+          "macro avg": {
+            "precision": 0.9622507122507122,
+            "recall": 0.9416969147005445,
+            "f1-score": 0.9512987012987013,
+            "support": 105.0
+          },
+          "weighted avg": {
+            "precision": 0.9619318952652286,
+            "recall": 0.9619047619047619,
+            "f1-score": 0.9614718614718615,
+            "support": 105.0
+          }
+        },
+        "threshold": 0.67
+      },
+      "test_metrics": {
+        "accuracy": 0.9539170506912442,
+        "precision": 0.9696969696969697,
+        "recall": 0.8888888888888888,
+        "f1": 0.927536231884058,
+        "roc_auc": 0.9846743295019157,
+        "confusion_matrix": [
+          [
+            143,
+            2
+          ],
+          [
+            8,
+            64
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.9470198675496688,
+            "recall": 0.9862068965517241,
+            "f1-score": 0.9662162162162162,
+            "support": 145.0
+          },
+          "1": {
+            "precision": 0.9696969696969697,
+            "recall": 0.8888888888888888,
+            "f1-score": 0.927536231884058,
+            "support": 72.0
+          },
+          "accuracy": 0.9539170506912442,
+          "macro avg": {
+            "precision": 0.9583584186233193,
+            "recall": 0.9375478927203065,
+            "f1-score": 0.9468762240501372,
+            "support": 217.0
+          },
+          "weighted avg": {
+            "precision": 0.9545440673404783,
+            "recall": 0.9539170506912442,
+            "f1-score": 0.9533823043640716,
+            "support": 217.0
+          }
+        },
+        "threshold": 0.67
+      },
+      "threshold": 0.67,
+      "feature_names": [
+        "compressor_state",
+        "energy_consumption",
+        "flow_pressure_ratio",
+        "flow_rate",
+        "pressure",
+        "pump_speed",
+        "pump_state",
+        "sensor_id_encoded",
+        "temperature",
+        "valve_status"
+      ],
+      "training_time_seconds": 0.4167191982269287
+    },
+    {
+      "model_name": "XGBoost",
+      "model_config": {
+        "n_estimators": 200,
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42
+      },
+      "train_metrics": {
+        "accuracy": 0.9985250737463127,
+        "precision": 1.0,
+        "recall": 0.9951219512195122,
+        "f1": 0.9975550122249389,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            473,
+            0
+          ],
+          [
+            1,
+            204
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.9978902953586498,
+            "recall": 1.0,
+            "f1-score": 0.9989440337909187,
+            "support": 473.0
+          },
+          "1": {
+            "precision": 1.0,
+            "recall": 0.9951219512195122,
+            "f1-score": 0.9975550122249389,
+            "support": 205.0
+          },
+          "accuracy": 0.9985250737463127,
+          "macro avg": {
+            "precision": 0.998945147679325,
+            "recall": 0.9975609756097561,
+            "f1-score": 0.9982495230079288,
+            "support": 678.0
+          },
+          "weighted avg": {
+            "precision": 0.9985281854050758,
+            "recall": 0.9985250737463127,
+            "f1-score": 0.9985240493941254,
+            "support": 678.0
+          }
+        },
+        "threshold": 0.9
+      },
+      "val_metrics": {
+        "accuracy": 0.9523809523809523,
+        "precision": 0.9615384615384616,
+        "recall": 0.8620689655172413,
+        "f1": 0.9090909090909091,
+        "roc_auc": 0.9886569872958257,
+        "confusion_matrix": [
+          [
+            75,
+            1
+          ],
+          [
+            4,
+            25
+          ]
+        ],
+        "class_report": {
+          "0": {
+            "precision": 0.9493670886075949,
+            "recall": 0.9868421052631579,
+            "f1-score": 0.967741935483871,
+            "support": 76.0
+          },
+          "1": {
+            "precision": 0.9615384615384616,
+            "recall": 0.8620689655172413,
+            "f1-score": 0.9090909090909091,
+            "support": 29.0
+          },
+          "accuracy": 0.9523809523809523,
+          "macro avg": {
+            "precision": 0.9554527750730282,
+            "recall": 0.9244555353901995,
+            "f1-score": 0.9384164222873901,
+            "support": 105.0
+          },
+          "weighted avg": {
+            "precision": 0.9527287058932629,
+            "recall": 0.9523809523809523,
+            "f1-score": 0.9515430805753385,
+            "support": 105.0
+          }
+        },
+        "threshold": 0.9
+      },
+      "test_metrics": null,
+      "threshold": 0.9,
+      "feature_names": [
+        "compressor_state",
+        "energy_consumption",
+        "flow_pressure_ratio",
+        "flow_rate",
+        "pressure",
+        "pump_speed",
+        "pump_state",
+        "sensor_id_encoded",
+        "temperature",
+        "valve_status"
+      ],
+      "training_time_seconds": 0.3873574733734131
+    }
+  ],
+  "selected_model": "RandomForest",
+  "selected_threshold": 0.67,
+  "final_test_metrics": {
+    "accuracy": 0.9539170506912442,
+    "precision": 0.9696969696969697,
+    "recall": 0.8888888888888888,
+    "f1": 0.927536231884058,
+    "roc_auc": 0.9846743295019157,
+    "confusion_matrix": [
+      [
+        143,
+        2
+      ],
+      [
+        8,
+        64
+      ]
+    ],
+    "class_report": {
+      "0": {
+        "precision": 0.9470198675496688,
+        "recall": 0.9862068965517241,
+        "f1-score": 0.9662162162162162,
+        "support": 145.0
+      },
+      "1": {
+        "precision": 0.9696969696969697,
+        "recall": 0.8888888888888888,
+        "f1-score": 0.927536231884058,
+        "support": 72.0
+      },
+      "accuracy": 0.9539170506912442,
+      "macro avg": {
+        "precision": 0.9583584186233193,
+        "recall": 0.9375478927203065,
+        "f1-score": 0.9468762240501372,
+        "support": 217.0
+      },
+      "weighted avg": {
+        "precision": 0.9545440673404783,
+        "recall": 0.9539170506912442,
+        "f1-score": 0.9533823043640716,
+        "support": 217.0
+      }
+    },
+    "threshold": 0.67
+  },
+  "recommendations": [
+    "Selected model: RandomForest with threshold 0.6700",
+    "Test F1: 0.9275, ROC-AUC: 0.9847",
+    "Split is sensor-level (no sensor appears in multiple splits)",
+    "Preprocessing fitted on training data only (no leakage)",
+    "Class imbalance handled via class_weight='balanced' and scale_pos_weight",
+    "Threshold optimized on validation set (not test set)",
+    "For production: monitor feature drift and retrain periodically"
+  ]
+}

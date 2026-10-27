@@ -3,8 +3,8 @@
   "total_rows_raw": 270499,
   "total_rows_clean": 270499,
   "total_rows_removed": 0,
-  "start_time": "2026-10-10T22:30:37.756356",
-  "end_time": "2026-10-10T22:30:38.533258",
+  "start_time": "2026-10-27T18:38:33.863077",
+  "end_time": "2026-10-27T18:38:35.866438",
   "steps": [
     {
       "step_name": "validate_timestamps",
@@ -22,7 +22,7 @@
           "max": "2023-12-08 10:00:00"
         }
       },
-      "timestamp": "2026-10-10T22:30:38.109833"
+      "timestamp": "2026-10-27T18:38:34.955405"
     },
     {
       "step_name": "enforce_chronological_order",
@@ -37,7 +37,7 @@
         ],
         "was_already_sorted": true
       },
-      "timestamp": "2026-10-10T22:30:38.172156"
+      "timestamp": "2026-10-27T18:38:35.068485"
     },
     {
       "step_name": "handle_duplicates",
@@ -60,7 +60,7 @@
         "reading_index_added": false,
         "action": "Exact duplicates removed; conflicting key duplicates preserved with reading_index"
       },
-      "timestamp": "2026-10-10T22:30:38.273066"
+      "timestamp": "2026-10-27T18:38:35.268317"
     },
     {
       "step_name": "detect_missing_values",
@@ -83,7 +83,7 @@
         "rows_with_any_missing": 0,
         "action": "REPORT_ONLY - no rows removed"
       },
-      "timestamp": "2026-10-10T22:30:38.301642"
+      "timestamp": "2026-10-27T18:38:35.345483"
     },
     {
       "step_name": "validate_telemetry_numeric",
@@ -101,7 +101,7 @@
         "total_non_numeric": 0,
         "action": "REPORT_ONLY - no conversion performed"
       },
-      "timestamp": "2026-10-10T22:30:38.308835"
+      "timestamp": "2026-10-27T18:38:35.355346"
     },
     {
       "step_name": "coerce_telemetry_numeric",
@@ -120,7 +120,7 @@
         "total_coerced": 0,
         "rows_removed_due_to_nan_telemetry": 0
       },
-      "timestamp": "2026-10-10T22:30:38.328576"
+      "timestamp": "2026-10-27T18:38:35.386759"
     },
     {
       "step_name": "detect_impossible_values",
@@ -154,7 +154,7 @@
         "rows_with_any_impossible": 52,
         "action": "REPORT_ONLY - abnormal values preserved for leak detection"
       },
-      "timestamp": "2026-10-10T22:30:38.339256"
+      "timestamp": "2026-10-27T18:38:35.398255"
     },
     {
       "step_name": "inspect_outliers",
@@ -184,7 +184,7 @@
         },
         "action": "REPORT_ONLY - outliers preserved (may indicate leaks)"
       },
-      "timestamp": "2026-10-10T22:30:38.353367"
+      "timestamp": "2026-10-27T18:38:35.420692"
     },
     {
       "step_name": "check_sensor_consistency",
@@ -311,7 +311,7 @@
         "single_reading_sensors": 0,
         "action": "REPORT_ONLY"
       },
-      "timestamp": "2026-10-10T22:30:38.402272"
+      "timestamp": "2026-10-27T18:38:35.543661"
     },
     {
       "step_name": "check_sampling_interval",
@@ -341,7 +341,7 @@
             "n_intervals": 13033,
             "mean_interval_hours": 3.240236323179621,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 27.452711755957516,
+            "std_interval_hours": 27.45271175595751,
             "on_time_count": 10918,
             "early_count": 0,
             "late_count": 2115,
@@ -363,7 +363,7 @@
             "n_intervals": 27617,
             "mean_interval_hours": 1.5231560270847666,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 14.987494112899856,
+            "std_interval_hours": 14.987494112899855,
             "on_time_count": 25000,
             "early_count": 0,
             "late_count": 2617,
@@ -374,7 +374,7 @@
             "n_intervals": 32195,
             "mean_interval_hours": 1.3169436247864574,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 13.981277147694511,
+            "std_interval_hours": 13.981277147694513,
             "on_time_count": 30510,
             "early_count": 0,
             "late_count": 1685,
@@ -385,7 +385,7 @@
             "n_intervals": 19620,
             "mean_interval_hours": 2.1402650356778796,
             "median_interval_hours": 2.0,
-            "std_interval_hours": 17.897198085253713,
+            "std_interval_hours": 17.897198085253716,
             "on_time_count": 5908,
             "early_count": 0,
             "late_count": 13712,
@@ -396,7 +396,7 @@
             "n_intervals": 28792,
             "mean_interval_hours": 1.458703806612948,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 15.022046131870786,
+            "std_interval_hours": 15.022046131870782,
             "on_time_count": 24958,
             "early_count": 0,
             "late_count": 3834,
@@ -407,7 +407,7 @@
             "n_intervals": 32148,
             "mean_interval_hours": 1.306333208908797,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 12.885133525043992,
+            "std_interval_hours": 12.885133525043996,
             "on_time_count": 30343,
             "early_count": 0,
             "late_count": 1805,
@@ -418,7 +418,7 @@
             "n_intervals": 30073,
             "mean_interval_hours": 1.3962690785754663,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 14.46719401818233,
+            "std_interval_hours": 14.467194018182328,
             "on_time_count": 26732,
             "early_count": 0,
             "late_count": 3341,
@@ -429,7 +429,7 @@
             "n_intervals": 27237,
             "mean_interval_hours": 1.5416896133935456,
             "median_interval_hours": 1.0,
-            "std_interval_hours": 15.26382987816994,
+            "std_interval_hours": 15.263829878169936,
             "on_time_count": 21456,
             "early_count": 0,
             "late_count": 5781,
@@ -438,7 +438,7 @@
         ],
         "action": "REPORT_ONLY"
       },
-      "timestamp": "2026-10-10T22:30:38.464001"
+      "timestamp": "2026-10-27T18:38:35.718821"
     },
     {
       "step_name": "validate_data_integrity",
@@ -466,7 +466,7 @@
         "all_checks_passed": false,
         "action": "VALIDATION_REPORT"
       },
-      "timestamp": "2026-10-10T22:30:38.530844"
+      "timestamp": "2026-10-27T18:38:35.860907"
     }
   ]
 }
