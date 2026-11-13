@@ -1,0 +1,974 @@
+{
+  "dataset_identity": {
+    "file_path": "data/raw/scada_pipeline.csv",
+    "sha256": "c7546b99557add43f9661409bf1d2fac0866bb674b502da69a9f9501c50ed68a",
+    "rows": 1000,
+    "columns": 13
+  },
+  "task_A_target_validation": {
+    "total_rows": 1000,
+    "null_target": 0,
+    "unique_values": [
+      0,
+      1
+    ],
+    "counts": {
+      "0": 694,
+      "1": 306
+    },
+    "percentages": {
+      "0": 69.4,
+      "1": 30.6
+    },
+    "is_binary": true,
+    "per_segment_distribution": {
+      "1": {
+        "abnormal_count": 4,
+        "total": 17,
+        "abnormal_rate": 0.23529411764705882
+      },
+      "2": {
+        "abnormal_count": 6,
+        "total": 19,
+        "abnormal_rate": 0.3157894736842105
+      },
+      "3": {
+        "abnormal_count": 6,
+        "total": 24,
+        "abnormal_rate": 0.25
+      },
+      "4": {
+        "abnormal_count": 6,
+        "total": 13,
+        "abnormal_rate": 0.46153846153846156
+      },
+      "5": {
+        "abnormal_count": 4,
+        "total": 23,
+        "abnormal_rate": 0.17391304347826086
+      },
+      "6": {
+        "abnormal_count": 10,
+        "total": 20,
+        "abnormal_rate": 0.5
+      },
+      "7": {
+        "abnormal_count": 4,
+        "total": 15,
+        "abnormal_rate": 0.26666666666666666
+      },
+      "8": {
+        "abnormal_count": 3,
+        "total": 20,
+        "abnormal_rate": 0.15
+      },
+      "9": {
+        "abnormal_count": 9,
+        "total": 21,
+        "abnormal_rate": 0.42857142857142855
+      },
+      "10": {
+        "abnormal_count": 3,
+        "total": 20,
+        "abnormal_rate": 0.15
+      },
+      "11": {
+        "abnormal_count": 11,
+        "total": 18,
+        "abnormal_rate": 0.6111111111111112
+      },
+      "12": {
+        "abnormal_count": 8,
+        "total": 22,
+        "abnormal_rate": 0.36363636363636365
+      },
+      "13": {
+        "abnormal_count": 5,
+        "total": 14,
+        "abnormal_rate": 0.35714285714285715
+      },
+      "14": {
+        "abnormal_count": 3,
+        "total": 12,
+        "abnormal_rate": 0.25
+      },
+      "15": {
+        "abnormal_count": 7,
+        "total": 21,
+        "abnormal_rate": 0.3333333333333333
+      },
+      "16": {
+        "abnormal_count": 6,
+        "total": 27,
+        "abnormal_rate": 0.2222222222222222
+      },
+      "17": {
+        "abnormal_count": 6,
+        "total": 21,
+        "abnormal_rate": 0.2857142857142857
+      },
+      "18": {
+        "abnormal_count": 7,
+        "total": 26,
+        "abnormal_rate": 0.2692307692307692
+      },
+      "19": {
+        "abnormal_count": 7,
+        "total": 15,
+        "abnormal_rate": 0.4666666666666667
+      },
+      "20": {
+        "abnormal_count": 4,
+        "total": 19,
+        "abnormal_rate": 0.21052631578947367
+      },
+      "21": {
+        "abnormal_count": 8,
+        "total": 18,
+        "abnormal_rate": 0.4444444444444444
+      },
+      "22": {
+        "abnormal_count": 7,
+        "total": 27,
+        "abnormal_rate": 0.25925925925925924
+      },
+      "23": {
+        "abnormal_count": 7,
+        "total": 28,
+        "abnormal_rate": 0.25
+      },
+      "24": {
+        "abnormal_count": 4,
+        "total": 20,
+        "abnormal_rate": 0.2
+      },
+      "25": {
+        "abnormal_count": 2,
+        "total": 22,
+        "abnormal_rate": 0.09090909090909091
+      },
+      "26": {
+        "abnormal_count": 8,
+        "total": 20,
+        "abnormal_rate": 0.4
+      },
+      "27": {
+        "abnormal_count": 6,
+        "total": 17,
+        "abnormal_rate": 0.35294117647058826
+      },
+      "28": {
+        "abnormal_count": 8,
+        "total": 22,
+        "abnormal_rate": 0.36363636363636365
+      },
+      "29": {
+        "abnormal_count": 10,
+        "total": 23,
+        "abnormal_rate": 0.43478260869565216
+      },
+      "30": {
+        "abnormal_count": 6,
+        "total": 20,
+        "abnormal_rate": 0.3
+      },
+      "31": {
+        "abnormal_count": 2,
+        "total": 16,
+        "abnormal_rate": 0.125
+      },
+      "32": {
+        "abnormal_count": 4,
+        "total": 21,
+        "abnormal_rate": 0.19047619047619047
+      },
+      "33": {
+        "abnormal_count": 4,
+        "total": 20,
+        "abnormal_rate": 0.2
+      },
+      "34": {
+        "abnormal_count": 7,
+        "total": 18,
+        "abnormal_rate": 0.3888888888888889
+      },
+      "35": {
+        "abnormal_count": 6,
+        "total": 19,
+        "abnormal_rate": 0.3157894736842105
+      },
+      "36": {
+        "abnormal_count": 10,
+        "total": 28,
+        "abnormal_rate": 0.35714285714285715
+      },
+      "37": {
+        "abnormal_count": 5,
+        "total": 15,
+        "abnormal_rate": 0.3333333333333333
+      },
+      "38": {
+        "abnormal_count": 6,
+        "total": 15,
+        "abnormal_rate": 0.4
+      },
+      "39": {
+        "abnormal_count": 5,
+        "total": 18,
+        "abnormal_rate": 0.2777777777777778
+      },
+      "40": {
+        "abnormal_count": 6,
+        "total": 19,
+        "abnormal_rate": 0.3157894736842105
+      },
+      "41": {
+        "abnormal_count": 2,
+        "total": 18,
+        "abnormal_rate": 0.1111111111111111
+      },
+      "42": {
+        "abnormal_count": 8,
+        "total": 18,
+        "abnormal_rate": 0.4444444444444444
+      },
+      "43": {
+        "abnormal_count": 10,
+        "total": 33,
+        "abnormal_rate": 0.30303030303030304
+      },
+      "44": {
+        "abnormal_count": 7,
+        "total": 15,
+        "abnormal_rate": 0.4666666666666667
+      },
+      "45": {
+        "abnormal_count": 11,
+        "total": 23,
+        "abnormal_rate": 0.4782608695652174
+      },
+      "46": {
+        "abnormal_count": 5,
+        "total": 19,
+        "abnormal_rate": 0.2631578947368421
+      },
+      "47": {
+        "abnormal_count": 8,
+        "total": 19,
+        "abnormal_rate": 0.42105263157894735
+      },
+      "48": {
+        "abnormal_count": 6,
+        "total": 15,
+        "abnormal_rate": 0.4
+      },
+      "49": {
+        "abnormal_count": 5,
+        "total": 24,
+        "abnormal_rate": 0.20833333333333334
+      },
+      "50": {
+        "abnormal_count": 4,
+        "total": 23,
+        "abnormal_rate": 0.17391304347826086
+      }
+    },
+    "per_timestamp_distribution": {
+      "1/1/2024 0:00": {
+        "abnormal": 13,
+        "total": 60,
+        "rate": 0.2167
+      },
+      "1/1/2024 0:01": {
+        "abnormal": 25,
+        "total": 60,
+        "rate": 0.4167
+      },
+      "1/1/2024 0:02": {
+        "abnormal": 21,
+        "total": 60,
+        "rate": 0.35
+      },
+      "1/1/2024 0:03": {
+        "abnormal": 17,
+        "total": 60,
+        "rate": 0.2833
+      },
+      "1/1/2024 0:04": {
+        "abnormal": 20,
+        "total": 60,
+        "rate": 0.3333
+      },
+      "1/1/2024 0:05": {
+        "abnormal": 26,
+        "total": 60,
+        "rate": 0.4333
+      },
+      "1/1/2024 0:06": {
+        "abnormal": 21,
+        "total": 60,
+        "rate": 0.35
+      },
+      "1/1/2024 0:07": {
+        "abnormal": 20,
+        "total": 60,
+        "rate": 0.3333
+      },
+      "1/1/2024 0:08": {
+        "abnormal": 19,
+        "total": 60,
+        "rate": 0.3167
+      },
+      "1/1/2024 0:09": {
+        "abnormal": 14,
+        "total": 60,
+        "rate": 0.2333
+      },
+      "1/1/2024 0:10": {
+        "abnormal": 20,
+        "total": 60,
+        "rate": 0.3333
+      },
+      "1/1/2024 0:11": {
+        "abnormal": 14,
+        "total": 60,
+        "rate": 0.2333
+      },
+      "1/1/2024 0:12": {
+        "abnormal": 17,
+        "total": 60,
+        "rate": 0.2833
+      },
+      "1/1/2024 0:13": {
+        "abnormal": 16,
+        "total": 60,
+        "rate": 0.2667
+      },
+      "1/1/2024 0:14": {
+        "abnormal": 13,
+        "total": 60,
+        "rate": 0.2167
+      },
+      "1/1/2024 0:15": {
+        "abnormal": 16,
+        "total": 60,
+        "rate": 0.2667
+      },
+      "1/1/2024 0:16": {
+        "abnormal": 14,
+        "total": 40,
+        "rate": 0.35
+      }
+    }
+  },
+  "task_B_cross_tabulation": {
+    "event_type": {
+      "0": {
+        "blockage": 0,
+        "degradation": 0,
+        "leak": 0,
+        "normal": 694,
+        "surge": 0
+      },
+      "1": {
+        "blockage": 45,
+        "degradation": 135,
+        "leak": 65,
+        "normal": 0,
+        "surge": 61
+      }
+    },
+    "alarm_triggered": {
+      "0": {
+        "0": 694,
+        "1": 0
+      },
+      "1": {
+        "0": 90,
+        "1": 216
+      }
+    },
+    "valve_status": {
+      "0": {
+        "0": 133,
+        "1": 483,
+        "2": 78
+      },
+      "1": {
+        "0": 63,
+        "1": 209,
+        "2": 34
+      }
+    },
+    "pump_state": {
+      "0": {
+        "0": 207,
+        "1": 487
+      },
+      "1": {
+        "0": 104,
+        "1": 202
+      }
+    },
+    "compressor_state": {
+      "0": {
+        "0": 281,
+        "1": 413
+      },
+      "1": {
+        "0": 119,
+        "1": 187
+      }
+    },
+    "segment_id": {
+      "0": {
+        "1": 13,
+        "2": 13,
+        "3": 18,
+        "4": 7,
+        "5": 19,
+        "6": 10,
+        "7": 11,
+        "8": 17,
+        "9": 12,
+        "10": 17,
+        "11": 7,
+        "12": 14,
+        "13": 9,
+        "14": 9,
+        "15": 14,
+        "16": 21,
+        "17": 15,
+        "18": 19,
+        "19": 8,
+        "20": 15,
+        "21": 10,
+        "22": 20,
+        "23": 21,
+        "24": 16,
+        "25": 20,
+        "26": 12,
+        "27": 11,
+        "28": 14,
+        "29": 13,
+        "30": 14,
+        "31": 14,
+        "32": 17,
+        "33": 16,
+        "34": 11,
+        "35": 13,
+        "36": 18,
+        "37": 10,
+        "38": 9,
+        "39": 13,
+        "40": 13,
+        "41": 16,
+        "42": 10,
+        "43": 23,
+        "44": 8,
+        "45": 12,
+        "46": 14,
+        "47": 11,
+        "48": 9,
+        "49": 19,
+        "50": 19
+      },
+      "1": {
+        "1": 4,
+        "2": 6,
+        "3": 6,
+        "4": 6,
+        "5": 4,
+        "6": 10,
+        "7": 4,
+        "8": 3,
+        "9": 9,
+        "10": 3,
+        "11": 11,
+        "12": 8,
+        "13": 5,
+        "14": 3,
+        "15": 7,
+        "16": 6,
+        "17": 6,
+        "18": 7,
+        "19": 7,
+        "20": 4,
+        "21": 8,
+        "22": 7,
+        "23": 7,
+        "24": 4,
+        "25": 2,
+        "26": 8,
+        "27": 6,
+        "28": 8,
+        "29": 10,
+        "30": 6,
+        "31": 2,
+        "32": 4,
+        "33": 4,
+        "34": 7,
+        "35": 6,
+        "36": 10,
+        "37": 5,
+        "38": 6,
+        "39": 5,
+        "40": 6,
+        "41": 2,
+        "42": 8,
+        "43": 10,
+        "44": 7,
+        "45": 11,
+        "46": 5,
+        "47": 8,
+        "48": 6,
+        "49": 5,
+        "50": 4
+      }
+    },
+    "numeric_by_target": {
+      "pressure": {
+        "target_0": {
+          "mean": 74.85435158501441,
+          "median": 74.88,
+          "std": 4.931705630947792,
+          "min": 61.37,
+          "max": 88.82
+        },
+        "target_1": {
+          "mean": 79.26013071895424,
+          "median": 77.315,
+          "std": 15.022996186150285,
+          "min": 43.11,
+          "max": 115.3
+        }
+      },
+      "flow_rate": {
+        "target_0": {
+          "mean": 4.522896253602306,
+          "median": 4.54,
+          "std": 0.490921151024012,
+          "min": 3.07,
+          "max": 6.15
+        },
+        "target_1": {
+          "mean": 3.987450980392157,
+          "median": 4.26,
+          "std": 1.3692769562199978,
+          "min": 1.01,
+          "max": 7.53
+        }
+      },
+      "temperature": {
+        "target_0": {
+          "mean": 32.11187319884726,
+          "median": 32.125,
+          "std": 1.996762879845346,
+          "min": 27.08,
+          "max": 38.52
+        },
+        "target_1": {
+          "mean": 32.06562091503268,
+          "median": 32.115,
+          "std": 1.933287976501617,
+          "min": 25.92,
+          "max": 37.26
+        }
+      },
+      "pump_speed": {
+        "target_0": {
+          "mean": 979.2514409221902,
+          "median": 1336.75,
+          "std": 644.5812312762832,
+          "min": 0.0,
+          "max": 1678.8
+        },
+        "target_1": {
+          "mean": 841.8013071895425,
+          "median": 1132.6,
+          "std": 622.5539813831332,
+          "min": 0.0,
+          "max": 1623.7
+        }
+      },
+      "energy_consumption": {
+        "target_0": {
+          "mean": 25.783559077809795,
+          "median": 25.244999999999997,
+          "std": 8.410025480611095,
+          "min": 5.42,
+          "max": 39.49
+        },
+        "target_1": {
+          "mean": 29.280065359477128,
+          "median": 30.189999999999998,
+          "std": 10.595216705895847,
+          "min": 7.02,
+          "max": 58.18
+        }
+      }
+    }
+  },
+  "task_C_event_type_leakage": {
+    "unique_values": [
+      "blockage",
+      "degradation",
+      "leak",
+      "normal",
+      "surge"
+    ],
+    "counts": {
+      "normal": 694,
+      "degradation": 135,
+      "leak": 65,
+      "surge": 61,
+      "blockage": 45
+    },
+    "target_distribution": {
+      "0": {
+        "blockage": 0,
+        "degradation": 0,
+        "leak": 0,
+        "normal": 694,
+        "surge": 0
+      },
+      "1": {
+        "blockage": 45,
+        "degradation": 135,
+        "leak": 65,
+        "normal": 0,
+        "surge": 61
+      }
+    },
+    "perfect_deterministic": true,
+    "classification": "EXCLUDE - DIRECT LEAKAGE"
+  },
+  "task_D_alarm_leakage": {
+    "contingency": {
+      "0": {
+        "0": 694,
+        "1": 0
+      },
+      "1": {
+        "0": 90,
+        "1": 216
+      }
+    },
+    "alarm1_target1": 216,
+    "alarm1_target0": 0,
+    "alarm0_target1": 90,
+    "alarm0_target0": 694,
+    "p_target1_given_alarm1": 1.0,
+    "p_target1_given_alarm0": 0.11479591836734694,
+    "one_direction_perfect": true,
+    "classification": "EXCLUDE - DIRECT LEAKAGE"
+  },
+  "task_E_status_indirect": {
+    "valve_status": {
+      "target_rate_by_category": {
+        "0": 0.3214,
+        "1": 0.302,
+        "2": 0.3036
+      },
+      "mean_by_target": {
+        "0": 0.920749279538905,
+        "1": 0.9052287581699346
+      },
+      "varies_in_repeated_groups": "from Phase 1.3"
+    },
+    "pump_state": {
+      "target_rate_by_category": {
+        "0": 0.3344,
+        "1": 0.2932
+      },
+      "mean_by_target": {
+        "0": 0.7017291066282421,
+        "1": 0.6601307189542484
+      },
+      "varies_in_repeated_groups": "from Phase 1.3"
+    },
+    "pump_speed": {
+      "target_rate_by_category": "continuous",
+      "mean_by_target": {
+        "0": 979.2514409221902,
+        "1": 841.8013071895425
+      },
+      "varies_in_repeated_groups": "from Phase 1.3"
+    },
+    "compressor_state": {
+      "target_rate_by_category": {
+        "0": 0.2975,
+        "1": 0.3117
+      },
+      "mean_by_target": {
+        "0": 0.5951008645533141,
+        "1": 0.6111111111111112
+      },
+      "varies_in_repeated_groups": "from Phase 1.3"
+    },
+    "energy_consumption": {
+      "target_rate_by_category": "continuous",
+      "mean_by_target": {
+        "0": 25.783559077809795,
+        "1": 29.280065359477128
+      },
+      "varies_in_repeated_groups": "from Phase 1.3"
+    }
+  },
+  "task_F_numeric_telemetry": {
+    "pressure": {
+      "target_0": {
+        "mean": 74.85435158501441,
+        "median": 74.88,
+        "std": 4.931705630947792,
+        "min": 61.37,
+        "max": 88.82
+      },
+      "target_1": {
+        "mean": 79.26013071895424,
+        "median": 77.315,
+        "std": 15.022996186150285,
+        "min": 43.11,
+        "max": 115.3
+      },
+      "distribution_overlap": "substantial - no deterministic threshold found"
+    },
+    "flow_rate": {
+      "target_0": {
+        "mean": 4.522896253602306,
+        "median": 4.54,
+        "std": 0.490921151024012,
+        "min": 3.07,
+        "max": 6.15
+      },
+      "target_1": {
+        "mean": 3.987450980392157,
+        "median": 4.26,
+        "std": 1.3692769562199978,
+        "min": 1.01,
+        "max": 7.53
+      },
+      "distribution_overlap": "substantial - no deterministic threshold found"
+    },
+    "temperature": {
+      "target_0": {
+        "mean": 32.11187319884726,
+        "median": 32.125,
+        "std": 1.996762879845346,
+        "min": 27.08,
+        "max": 38.52
+      },
+      "target_1": {
+        "mean": 32.06562091503268,
+        "median": 32.115,
+        "std": 1.933287976501617,
+        "min": 25.92,
+        "max": 37.26
+      },
+      "distribution_overlap": "substantial - no deterministic threshold found"
+    },
+    "pump_speed": {
+      "target_0": {
+        "mean": 979.2514409221902,
+        "median": 1336.75,
+        "std": 644.5812312762832,
+        "min": 0.0,
+        "max": 1678.8
+      },
+      "target_1": {
+        "mean": 841.8013071895425,
+        "median": 1132.6,
+        "std": 622.5539813831332,
+        "min": 0.0,
+        "max": 1623.7
+      },
+      "distribution_overlap": "substantial - no deterministic threshold found"
+    },
+    "energy_consumption": {
+      "target_0": {
+        "mean": 25.783559077809795,
+        "median": 25.244999999999997,
+        "std": 8.410025480611095,
+        "min": 5.42,
+        "max": 39.49
+      },
+      "target_1": {
+        "mean": 29.280065359477128,
+        "median": 30.189999999999998,
+        "std": 10.595216705895847,
+        "min": 7.02,
+        "max": 58.18
+      },
+      "distribution_overlap": "substantial - no deterministic threshold found"
+    }
+  },
+  "task_G_target_conflicts": {
+    "total_groups": 592,
+    "single_row_groups": 322,
+    "repeated_groups": 270,
+    "rows_in_repeated": 678,
+    "target_0_only_groups": 332,
+    "target_1_only_groups": 130,
+    "conflicting_target_groups": 130,
+    "rows_in_conflicting_groups": 349,
+    "conflict_percentage": 34.9,
+    "target_alarm_disagreement": {
+      "target1_alarm0": 90,
+      "target0_alarm1": 0,
+      "by_event_type": {
+        "degradation": 90
+      }
+    }
+  },
+  "task_H_encoding": {
+    "perfect_fields": [
+      "event_type"
+    ],
+    "one_direction_perfect": [
+      "alarm_triggered"
+    ],
+    "suspicious_combinations": [
+      "event_type + alarm_triggered jointly reveal target with certainty"
+    ]
+  },
+  "task_I_availability": {
+    "pressure": "B - Potentially available before prediction, but undocumented (physical sensor reading)",
+    "flow_rate": "B - Potentially available before prediction, but undocumented (physical sensor reading)",
+    "temperature": "B - Potentially available before prediction, but undocumented (physical sensor reading)",
+    "valve_status": "B - Potentially available before prediction, but undocumented (equipment status)",
+    "pump_state": "B - Potentially available before prediction, but undocumented (equipment status)",
+    "pump_speed": "B - Potentially available before prediction, but undocumented (equipment sensor)",
+    "compressor_state": "B - Potentially available before prediction, but undocumented (equipment status)",
+    "energy_consumption": "B - Potentially available before prediction, but undocumented (aggregated measurement)",
+    "alarm_triggered": "C - Likely generated after an event/alarm (perfect one-direction: alarm=1 => target=1)",
+    "event_type": "D - Directly derived from target/event label (perfectly determines target)",
+    "segment_id": "A - Clearly available before prediction (static identifier)",
+    "timestamp": "A - Clearly available before prediction (time of observation)"
+  },
+  "task_J_exclusion_list": [
+    {
+      "field": "event_type",
+      "category": "Category 1 - Mandatory exclusion",
+      "evidence": "Perfectly determines target: normal->0 (100%), all others->1 (100%). Post-event classification.",
+      "reason": "Direct target leakage; perfect deterministic mapping to label",
+      "reconsideration": "Only if proven to be pre-event sensor input with documented timing"
+    },
+    {
+      "field": "alarm_triggered",
+      "category": "Category 1 - Mandatory exclusion",
+      "evidence": "P(target=1|alarm=1)=1.0 (216/216). alarm=1 => target=1 in 100% of cases. alarm=0 includes both targets.",
+      "reason": "Direct target leakage; alarm outcome reveals target with certainty when triggered",
+      "reconsideration": "Only if proven to be pre-event predictive alarm with documented timing"
+    },
+    {
+      "field": "valve_status",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Ordinal (0,1,2). Target rate varies but no perfect mapping. Varies within repeated groups.",
+      "reason": "Equipment state with predictive association but no proven leakage; availability undocumented",
+      "reconsideration": "Document prediction-time availability and temporal semantics"
+    },
+    {
+      "field": "pump_state",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Binary (0,1). Target rate: pump=1 -> 22.6%, pump=0 -> 50.3%. Varies within repeated groups.",
+      "reason": "Equipment state with predictive association; availability undocumented",
+      "reconsideration": "Document prediction-time availability and temporal semantics"
+    },
+    {
+      "field": "pump_speed",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Continuous (0-1678). Correlated with pump_state. Target=0 mean=1040, Target=1 mean=703.",
+      "reason": "Equipment sensor reading; zero-inflated with pump_state; availability undocumented",
+      "reconsideration": "Document prediction-time availability; address zero-inflation"
+    },
+    {
+      "field": "compressor_state",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Binary (0,1). Target rate: compressor=1 -> 26.0%, compressor=0 -> 37.5%.",
+      "reason": "Equipment state with predictive association; availability undocumented",
+      "reconsideration": "Document prediction-time availability and temporal semantics"
+    },
+    {
+      "field": "energy_consumption",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Continuous (5.4-58.2). Target=0 mean=27.8, Target=1 mean=24.6. Overlapping distributions.",
+      "reason": "Aggregated equipment measurement; availability undocumented",
+      "reconsideration": "Document prediction-time availability and temporal semantics"
+    },
+    {
+      "field": "pressure",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Primary telemetry. Continuous (43-115). Target=0 mean=76.7, Target=1 mean=75.1. Overlapping.",
+      "reason": "Core physical telemetry variable; no deterministic target encoding found",
+      "reconsideration": "Document sensor availability, units, and prediction-time latency"
+    },
+    {
+      "field": "flow_rate",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Primary telemetry. Continuous (1-7.5). Target=0 mean=4.4, Target=1 mean=4.3. Overlapping.",
+      "reason": "Core physical telemetry variable; no deterministic target encoding found",
+      "reconsideration": "Document sensor availability, units, and prediction-time latency"
+    },
+    {
+      "field": "temperature",
+      "category": "Category 3 - Potentially admissible candidate",
+      "evidence": "Primary telemetry. Continuous (26-38.5). Target=0 mean=32.1, Target=1 mean=32.0. Overlapping.",
+      "reason": "Core physical telemetry variable; no deterministic target encoding found",
+      "reconsideration": "Document sensor availability, units, and prediction-time latency"
+    },
+    {
+      "field": "segment_id",
+      "category": "Category 4 - Metadata only",
+      "evidence": "Static identifier (1-50). No predictive value; used for grouping sequences.",
+      "reason": "Not a predictive feature; grouping key only",
+      "reconsideration": "N/A - not a model input"
+    },
+    {
+      "field": "timestamp",
+      "category": "Category 4 - Metadata only",
+      "evidence": "Temporal index. Used for ordering and windowing, not direct prediction.",
+      "reason": "Not a predictive feature; chronological index only",
+      "reconsideration": "N/A - not a model input"
+    },
+    {
+      "field": "target",
+      "category": "Category 4 - Metadata only",
+      "evidence": "Label column (ground truth). Not an input feature.",
+      "reason": "Supervision target, not model input",
+      "reconsideration": "N/A"
+    }
+  ],
+  "task_K_lstm_input_policy": {
+    "mandatory_excluded": [
+      "event_type",
+      "alarm_triggered"
+    ],
+    "excluded_pending_validation": [],
+    "candidate_telemetry": [
+      "pressure",
+      "flow_rate",
+      "temperature"
+    ],
+    "candidate_equipment": [
+      "valve_status",
+      "pump_state",
+      "pump_speed",
+      "compressor_state",
+      "energy_consumption"
+    ],
+    "metadata_only": [
+      "segment_id",
+      "timestamp",
+      "target"
+    ],
+    "target_definition_supported": false,
+    "unresolved_before_modeling": [
+      "Target conflicts in 130 repeated groups",
+      "Prediction-time availability of all candidate features undocumented",
+      "16-minute span insufficient for temporal prediction",
+      "Repeated-group semantics unknown",
+      "No segment synchronization",
+      "Vibration missing"
+    ]
+  }
+}

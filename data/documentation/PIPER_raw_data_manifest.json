@@ -1,0 +1,164 @@
+{
+  "project_name": "PIPER",
+  "dataset_name": "SCADA_Pipeline",
+  "provider": null,
+  "hosting_platform": "Local repository (PIPER-)",
+  "original_source_url": null,
+  "version": null,
+  "download_date": null,
+  "licence": null,
+  "local_file_path": "data/raw/scada_pipeline.csv",
+  "file_format": "CSV",
+  "file_size_bytes": 64185,
+  "record_count": 1000,
+  "column_count": 13,
+  "column_names": [
+    "timestamp",
+    "segment_id",
+    "pressure",
+    "flow_rate",
+    "temperature",
+    "valve_status",
+    "pump_state",
+    "pump_speed",
+    "compressor_state",
+    "energy_consumption",
+    "alarm_triggered",
+    "event_type",
+    "target"
+  ],
+  "sha256_checksum": "c7546b99557add43f9661409bf1d2fac0866bb674b502da69a9f9501c50ed68a",
+  "measurement_origin_classification": {
+    "classification": "synthetic_or_generated",
+    "confidence": "high",
+    "basis": [
+      "No source documentation or provenance metadata",
+      "Extremely short collection window (16 minutes for 50 sensors)",
+      "All 50 segments have multiple conflicting readings at identical timestamps",
+      "All 50 segments contain both target classes (0 and 1)",
+      "Zero missing values, zero sensor gaps, perfect sensor coverage",
+      "Not present in claimed upstream repository (ApoErch/Water-Leakage-Detection)",
+      "No licence, citation, or download record"
+    ],
+    "source_reported": "No source documentation exists",
+    "locally_observed": "Multiple strong indicators of synthetic generation"
+  },
+  "collection_context": {
+    "pipeline_type": null,
+    "pipeline_application": null,
+    "physical_or_simulated_environment": null,
+    "sensor_types": null,
+    "sensor_placement": "segment_id 1-50 used as sensor proxy (no physical placement data)",
+    "measurement_units": {
+      "pressure": "inferred psi or bar (range ~66-102)",
+      "flow_rate": "inferred m3/h or similar (range ~1.4-5.9)",
+      "temperature": "inferred Celsius (range ~27-37)",
+      "pump_speed": "inferred RPM (range 0-1669)",
+      "energy_consumption": "inferred kW (range ~8-39.5)"
+    },
+    "operating_conditions": null,
+    "data_acquisition_system": "Filename suggests SCADA but no system identified",
+    "sampling_process": "Irregular; median ~1 minute but multiple readings per timestamp",
+    "sampling_frequency": "Not regular; 0% adherence to 1-hour interval",
+    "collection_duration_hours": 0.26666666666666666,
+    "collection_start": "2024-01-01 00:00:00",
+    "collection_end": "2024-01-01 00:16:00",
+    "number_of_pipelines": 1,
+    "number_of_segments": 50,
+    "number_of_sensors": 50,
+    "fault_event_generation_process": null,
+    "known_limitations_source_reported": [],
+    "documented_assumptions_source_reported": []
+  },
+  "sampling_information": {
+    "global_time_span_hours": 0.26666666666666666,
+    "unique_timestamps_global": 17,
+    "median_interval_minutes": 1.0,
+    "sampling_regularity": "irregular_with_duplicates",
+    "duplicate_segment_timestamp_keys": 270,
+    "conflicting_duplicate_rows": 408,
+    "per_segment_unique_timestamps_range": [8, 16],
+    "timestamp_format": "%m/%d/%Y %H:%M",
+    "timezone": null
+  },
+  "evidence_references": [
+    {
+      "file": "data/reports/scada_dataset_profile.json",
+      "type": "generated_report",
+      "description": "Dataset profile with column mapping and validation"
+    },
+    {
+      "file": "data/reports/cleaning_report_SCADA_Pipeline.json",
+      "type": "generated_report",
+      "description": "Comprehensive cleaning and validation audit"
+    },
+    {
+      "file": "data/reports/label_report_SCADA_Pipeline.json",
+      "type": "generated_report",
+      "description": "Label source and mapping report"
+    },
+    {
+      "file": "data/reports/scada_temporal_feasibility.json",
+      "type": "generated_report",
+      "description": "Temporal feasibility assessment for sequence modeling"
+    },
+    {
+      "file": "data/reports/phase2_summary.md",
+      "type": "generated_report",
+      "description": "Phase 2 completion summary"
+    },
+    {
+      "file": "utils/piper_telemetry.py",
+      "type": "source_code",
+      "description": "SCADA_COLUMN_MAPPING definition"
+    },
+    {
+      "file": "utils/piper_dataset.py",
+      "type": "source_code",
+      "description": "SCADA dataset loading and mapping functions"
+    },
+    {
+      "file": "data/raw/scada_pipeline.csv",
+      "type": "primary_artifact",
+      "description": "Raw dataset file (immutable)"
+    },
+    {
+      "url": "https://github.com/ApoErch/Water-Leakage-Detection",
+      "type": "external_reference",
+      "description": "Upstream repository checked; SCADA dataset not present"
+    }
+  ],
+  "unknown_fields": [
+    "provider",
+    "original_source_url",
+    "version",
+    "download_date",
+    "licence",
+    "pipeline_type",
+    "pipeline_application",
+    "physical_or_simulated_environment",
+    "sensor_types",
+    "sensor_placement",
+    "operating_conditions",
+    "data_acquisition_system",
+    "fault_event_generation_process",
+    "timezone",
+    "original_dataset_creator",
+    "original_publication_venue",
+    "data_generation_process_if_synthetic",
+    "geographic_location",
+    "fluid_transported"
+  ],
+  "verification_timestamp": "2026-11-05T15:30:00Z",
+  "value_provenance": {
+    "file_size_bytes": "locally_measured",
+    "record_count": "locally_measured_and_cross_referenced_with_reports",
+    "column_count": "locally_measured_and_cross_referenced_with_reports",
+    "column_names": "locally_measured",
+    "sha256_checksum": "locally_calculated_from_raw_file_bytes",
+    "measurement_origin_classification": "locally_inferred_from_data_characteristics",
+    "collection_context": "partially_from_generated_reports_partially_inferred",
+    "sampling_information": "from_generated_reports_and_local_analysis",
+    "unknown_fields": "explicitly_marked_as_unknown"
+  }
+}

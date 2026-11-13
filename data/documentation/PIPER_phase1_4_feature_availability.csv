@@ -1,0 +1,13 @@
+field,availability_assessment
+pressure,"B - Potentially available before prediction, but undocumented (physical sensor reading)"
+flow_rate,"B - Potentially available before prediction, but undocumented (physical sensor reading)"
+temperature,"B - Potentially available before prediction, but undocumented (physical sensor reading)"
+valve_status,"B - Potentially available before prediction, but undocumented (equipment status)"
+pump_state,"B - Potentially available before prediction, but undocumented (equipment status)"
+pump_speed,"B - Potentially available before prediction, but undocumented (equipment sensor)"
+compressor_state,"B - Potentially available before prediction, but undocumented (equipment status)"
+energy_consumption,"B - Potentially available before prediction, but undocumented (aggregated measurement)"
+alarm_triggered,C - Likely generated after an event/alarm (perfect one-direction: alarm=1 => target=1)
+event_type,D - Directly derived from target/event label (perfectly determines target)
+segment_id,A - Clearly available before prediction (static identifier)
+timestamp,A - Clearly available before prediction (time of observation)

@@ -1,30 +1,28 @@
 import pandas as pd
-from pathlib import Path
 
-data_dir = Path('./LeakageData')
-csv_files = sorted(data_dir.glob('*.csv'))
-print('Number of CSV files:', len(csv_files))
+df = pd.read_csv(r'C:\Users\krish\OneDrive\Desktop\piper\PIPER-\scada_pipeline_segment_even_timestamps.csv')
+print(f'Rows: {len(df)}, Cols: {len(df.columns)}')
+print(f'Columns: {list(df.columns)}')
+print(f'Unique segments: {df["segment_id"].nunique()}')
+print(f'Target distribution:\n{df["target"].value_counts()}')
+print(f'Event type distribution:\n{df["event_type"].value_counts()}')
+print(f'Alarm triggered distribution:\n{df["alarm_triggered"].value_counts()}')
+print(f'Valve status distribution:\n{df["valve_status"].value_counts()}')
+print(f'Missing values:\n{df.isnull().sum()}')
+print(f'Duplicates: {df.duplicated().sum()}')
+print(f'\nFirst few timestamps:\n{df["timestamp"].head()}')
+print(f'\nLast few timestamps:\n{df["timestamp"].tail()}')
 
-total_rows = 0
-meters = set()
-date_ranges = []
+# Check segment lengths
+segment_lengths = df.groupby('segment_id').size()
+print(f'\nSegment lengths:\n{segment_lengths}')
+print(f'Min segment length: {segment_lengths.min()}')
+print(f'Max segment length: {segment_lengths.max()}')
+print(f'Mean segment length: {segment_lengths.mean():.1f}')
 
-for f in csv_files:
-    df = pd.read_csv(f)
-    total_rows += len(df)
-    meters.add(df['Meter_ID'].iloc[0])
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%d/%m/%Y %H:%M', dayfirst=True)
-    date_ranges.append((df['Timestamp'].min(), df['Timestamp'].max()))
-    print(f'  {f.name}: {len(df)} rows, meter={df["Meter_ID"].iloc[0]}, date_range={df["Timestamp"].min()} to {df["Timestamp"].max()}')
-
-print()
-print('Total rows:', total_rows)
-print('Unique meters:', len(meters))
-print('Meters:', meters)
-
-# Check columns
-print('\nColumns in first file:')
-df0 = pd.read_csv(csv_files[0])
-print(df0.columns.tolist())
-print(df0.dtypes)
-print(df0.head())
+# Check timestamp format and ordering per segment
+for seg_id in sorted(df['segment_id'].unique()):
+    seg_df = df[df['segment_id'] == seg_id].copy()
+    seg_df['timestamp'] = pd.to_datetime(seg_df['timestamp'], format='%d-%m-%Y %H:%M:%S')
+    is_sorted = seg_df['timestamp'].is_monotonic_increasing
+    print(f'Segment {seg_id}: sorted={is_sorted}, time range: {seg_df["timestamp"].min()} to {seg_df["timestamp"].max()}')
