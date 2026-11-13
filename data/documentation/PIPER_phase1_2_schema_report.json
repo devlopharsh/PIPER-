@@ -1,0 +1,310 @@
+{
+  "dataset_identity": {
+    "file_path": "data/raw/scada_pipeline.csv",
+    "file_size_bytes": 64185,
+    "sha256": "c7546b99557add43f9661409bf1d2fac0866bb674b502da69a9f9501c50ed68a",
+    "phase1_1_hash_match": true,
+    "read_status": "success",
+    "format": "CSV"
+  },
+  "dimensions": {
+    "total_rows": 1000,
+    "total_columns": 13,
+    "total_missing_values": 0,
+    "missing_percentage": 0.0,
+    "unique_segments": 50,
+    "unique_timestamps": 17,
+    "unique_target_values": 2,
+    "exact_duplicate_rows": 0,
+    "duplicate_segment_timestamp_keys": 270,
+    "duplicate_segment_timestamp_rows": 678
+  },
+  "target_distribution": {
+    "classes": [0, 1],
+    "counts": {"0": 694, "1": 306},
+    "percentages": {"0": 69.4, "1": 30.6},
+    "is_binary": true
+  },
+  "column_inventory": [
+    {
+      "name": "timestamp",
+      "loaded_dtype": "object",
+      "interpreted_dtype": "datetime_string",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 17,
+      "min": null,
+      "max": null,
+      "mean": null,
+      "std": null,
+      "representative_values": ["1/1/2024 0:00", "1/1/2024 0:08", "1/1/2024 0:16"],
+      "is_constant": false
+    },
+    {
+      "name": "segment_id",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "categorical_id",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 50,
+      "min": 1,
+      "max": 50,
+      "mean": 25.746,
+      "std": 14.324,
+      "representative_values": [1, 25, 50],
+      "is_constant": false
+    },
+    {
+      "name": "pressure",
+      "loaded_dtype": "float64",
+      "interpreted_dtype": "continuous_numeric",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 833,
+      "min": 43.11,
+      "max": 115.30,
+      "mean": 76.2025,
+      "std": 9.4817,
+      "representative_values": [43.11, 76.20, 115.30],
+      "is_constant": false
+    },
+    {
+      "name": "flow_rate",
+      "loaded_dtype": "float64",
+      "interpreted_dtype": "continuous_numeric",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 312,
+      "min": 1.01,
+      "max": 7.53,
+      "mean": 4.3590,
+      "std": 0.8947,
+      "representative_values": [1.01, 4.36, 7.53],
+      "is_constant": false
+    },
+    {
+      "name": "temperature",
+      "loaded_dtype": "float64",
+      "interpreted_dtype": "continuous_numeric",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 553,
+      "min": 25.92,
+      "max": 38.52,
+      "mean": 32.0977,
+      "std": 1.9767,
+      "representative_values": [25.92, 32.10, 38.52],
+      "is_constant": false
+    },
+    {
+      "name": "valve_status",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "ordinal_categorical",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 3,
+      "min": 0,
+      "max": 2,
+      "mean": 0.916,
+      "std": 0.5489,
+      "representative_values": [0, 1, 2],
+      "is_constant": false
+    },
+    {
+      "name": "pump_state",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "binary_categorical",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 2,
+      "min": 0,
+      "max": 1,
+      "mean": 0.689,
+      "std": 0.4631,
+      "representative_values": [0, 1],
+      "is_constant": false
+    },
+    {
+      "name": "pump_speed",
+      "loaded_dtype": "float64",
+      "interpreted_dtype": "continuous_numeric",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 643,
+      "min": 0.0,
+      "max": 1678.8,
+      "mean": 937.1917,
+      "std": 640.7524,
+      "representative_values": [0.0, 937.19, 1678.8],
+      "is_constant": false
+    },
+    {
+      "name": "compressor_state",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "binary_categorical",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 2,
+      "min": 0,
+      "max": 1,
+      "mean": 0.600,
+      "std": 0.4901,
+      "representative_values": [0, 1],
+      "is_constant": false
+    },
+    {
+      "name": "energy_consumption",
+      "loaded_dtype": "float64",
+      "interpreted_dtype": "continuous_numeric",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 852,
+      "min": 5.42,
+      "max": 58.18,
+      "mean": 26.8535,
+      "std": 9.2702,
+      "representative_values": [5.42, 26.85, 58.18],
+      "is_constant": false
+    },
+    {
+      "name": "alarm_triggered",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "binary_categorical",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 2,
+      "min": 0,
+      "max": 1,
+      "mean": 0.216,
+      "std": 0.4117,
+      "representative_values": [0, 1],
+      "is_constant": false
+    },
+    {
+      "name": "event_type",
+      "loaded_dtype": "object",
+      "interpreted_dtype": "nominal_categorical",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 5,
+      "min": null,
+      "max": null,
+      "mean": null,
+      "std": null,
+      "representative_values": ["normal", "leak", "blockage", "degradation", "surge"],
+      "is_constant": false
+    },
+    {
+      "name": "target",
+      "loaded_dtype": "int64",
+      "interpreted_dtype": "binary_label",
+      "count": 1000,
+      "null_count": 0,
+      "null_percentage": 0.0,
+      "distinct_count": 2,
+      "min": 0,
+      "max": 1,
+      "mean": 0.306,
+      "std": 0.4611,
+      "representative_values": [0, 1],
+      "is_constant": false
+    }
+  ],
+  "column_classifications": {
+    "identifiers": ["segment_id"],
+    "timestamps": ["timestamp"],
+    "primary_telemetry": {
+      "present": ["pressure", "flow_rate", "temperature"],
+      "missing": ["vibration"],
+      "paper_required": ["pressure", "flow_rate", "temperature", "vibration"]
+    },
+    "equipment_state": ["valve_status", "pump_state", "pump_speed", "compressor_state", "energy_consumption"],
+    "target": ["target"],
+    "leakage_prone_metadata": [
+      {
+        "column": "event_type",
+        "severity": "critical",
+        "evidence": "Perfectly predicts target: normal->0 (100%), all others->1 (100%)"
+      },
+      {
+        "column": "alarm_triggered",
+        "severity": "high",
+        "evidence": "alarm=1 -> target=1 (100%), alarm=0 -> mixed (694 normal, 90 abnormal)"
+      }
+    ]
+  },
+  "candidate_features": {
+    "primary_telemetry_available": ["pressure", "flow_rate", "temperature"],
+    "primary_telemetry_missing": ["vibration"],
+    "auxiliary_equipment_state": ["valve_status", "pump_state", "pump_speed", "compressor_state", "energy_consumption"],
+    "excluded_leakage": ["event_type", "alarm_triggered"],
+    "excluded_structural": ["segment_id", "timestamp", "target"],
+    "lstm_input_candidates": {
+      "pressure": {"category": "primary_telemetry", "dtype": "float", "range": [43.11, 115.30], "encoding": "normalization", "suitable": true, "concerns": "Unit unknown"},
+      "flow_rate": {"category": "primary_telemetry", "dtype": "float", "range": [1.01, 7.53], "encoding": "normalization", "suitable": true, "concerns": "Unit unknown"},
+      "temperature": {"category": "primary_telemetry", "dtype": "float", "range": [25.92, 38.52], "encoding": "normalization", "suitable": true, "concerns": "Unit unknown"},
+      "valve_status": {"category": "equipment_state", "dtype": "ordinal", "range": [0, 2], "encoding": "one-hot or ordinal", "suitable": "maybe", "concerns": "Semantic meaning unknown"},
+      "pump_state": {"category": "equipment_state", "dtype": "binary", "range": [0, 1], "encoding": "none", "suitable": "maybe", "concerns": "Redundant with pump_speed=0"},
+      "pump_speed": {"category": "equipment_state", "dtype": "float", "range": [0.0, 1678.8], "encoding": "normalization", "suitable": "maybe", "concerns": "Zero-inflated, correlates with pump_state"},
+      "compressor_state": {"category": "equipment_state", "dtype": "binary", "range": [0, 1], "encoding": "none", "suitable": "maybe", "concerns": "Auxiliary equipment"},
+      "energy_consumption": {"category": "equipment_state", "dtype": "float", "range": [5.42, 58.18], "encoding": "normalization", "suitable": "maybe", "concerns": "Aggregated, may correlate with pump/compressor"}
+    }
+  },
+  "leakage_prone_fields": [
+    {
+      "column": "event_type",
+      "severity": "critical",
+      "type": "nominal_categorical",
+      "distinct_values": 5,
+      "leakage_evidence": "event_type='normal' => target=0 (694/694); all other event_types => target=1 (306/306). Perfect deterministic mapping.",
+      "recommendation": "EXCLUDE from all model inputs"
+    },
+    {
+      "column": "alarm_triggered",
+      "severity": "high",
+      "type": "binary",
+      "distinct_values": 2,
+      "leakage_evidence": "alarm_triggered=1 => target=1 (216/216). alarm_triggered=0 => target mixed (694 normal, 90 abnormal). Strong proxy.",
+      "recommendation": "EXCLUDE from all model inputs"
+    }
+  ],
+  "unknown_units": [
+    "pressure",
+    "flow_rate",
+    "temperature",
+    "pump_speed",
+    "energy_consumption"
+  ],
+  "audit_warnings": [
+    "VIBRATION MISSING: Paper requires 4 primary telemetry variables; only 3 present. Vibration must not be fabricated.",
+    "DUPLICATE TIMESTAMP KEYS: 270 (segment_id, timestamp) groups with 678 rows. Not a regular time series.",
+    "TARGET CONFLICTS IN DUPLICATES: 130 of 270 duplicate groups have conflicting target labels (both 0 and 1).",
+    "TEMPORAL SPAN ONLY 16 MINUTES: 17 unique timestamps from 00:00 to 00:16. Insufficient for LSTM sequence modeling.",
+    "CRITICAL LEAKAGE: event_type perfectly determines target. Must be excluded.",
+    "HIGH LEAKAGE: alarm_triggered=1 deterministically implies target=1. Must be excluded.",
+    "UNITS UNKNOWN: No documented units for any telemetry or equipment variable.",
+    "LABEL PROVENANCE UNKNOWN: Phase 1.1 provenance FAIL. Target generation process undocumented.",
+    "SEGMENT-TIMESTAMP MULTIPLICITY: Multiple readings per segment per timestamp — semantics unknown (multi-sensor? repeated samples? export duplicates?)"
+  ],
+  "phase1_2_verdict": "PASS",
+  "generated_files": [
+    "data/documentation/PIPER_phase1_2_schema_inventory.md",
+    "data/documentation/PIPER_data_dictionary.md",
+    "data/documentation/PIPER_phase1_2_schema_report.json"
+  ],
+  "raw_csv_unchanged": true,
+  "no_model_trained": true,
+  "no_source_code_modified": true
+}
