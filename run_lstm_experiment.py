@@ -27,6 +27,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
 
+# Enable deterministic mode for reproducibility
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+np.random.seed(42)
+
 # ============================================================
 # LSTM Model (copied from Algorithms/Lstm.py)
 # ============================================================
